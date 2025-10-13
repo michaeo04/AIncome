@@ -1,0 +1,2171 @@
+# FUNCTION LIST - APP QUẢN LÝ TÀI CHÍNH CÁ NHÂN
+
+## 1. TỔNG QUAN DỰ ÁN
+
+**Tên dự án:** Personal Finance Tracker  
+**Mục tiêu:** Xây dựng ứng dụng quản lý tài chính cá nhân đơn giản, giúp người dùng theo dõi thu chi thủ công, đặt ngân sách theo danh mục và theo dõi mục tiêu tiết kiệm
+
+**Concept chính:**
+- Ứng dụng cá nhân hóa cho **1 người dùng duy nhất** (1 tài khoản = 1 người)
+- **Tracking thủ công** các giao dịch thu (Income) và chi (Expense)
+- **Net Balance:** Số dư thực tế = Tổng thu - Tổng chi
+- **Budget Management:** Đặt ngân sách theo category chi tiêu, nhận cảnh báo khi gần/vượt ngưỡng
+- **Saving Goals:** Tạo mục tiêu tiết kiệm, theo dõi tiến độ dựa trên Net Balance tích lũy theo thời gian
+- Giao diện đơn giản, trực quan, tập trung vào trải nghiệm người dùng
+
+**Đối tượng người dùng:**
+- Cá nhân muốn quản lý tài chính hàng ngày
+- Độ tuổi: 18-45
+- Người mới bắt đầu quản lý tài chính cá nhân
+
+
+## 2. CẤU TRÚC APP
+
+### Navigation Bar (Bottom Navigation)
+1. **Home** - Tổng quan & danh sách giao dịch
+2. **Budget** - Quản lý ngân sách theo category
+3. **Analysis** - Báo cáo & phân tích
+4. **Profile** - Cài đặt & thông tin cá nhân
+5. **Floating "Add" Button** - Thêm giao dịch nhanh
+
+### Module Chính
+- **Module 1:** Authentication (Xác thực người dùng)
+- **Module 2:** Onboarding (Giới thiệu app lần đầu)
+- **Module 3:** Transaction Management (Quản lý giao dịch)
+- **Module 4:** Category Management (Quản lý danh mục)
+- **Module 5:** Budget Management (Quản lý ngân sách)
+- **Module 6:** Saving Goals (Mục tiêu tiết kiệm)
+- **Module 7:** Analysis & Reports (Phân tích & báo cáo)
+- **Module 8:** Profile & Settings (Hồ sơ & cài đặt)
+
+---
+
+### Supabase Project Settings
+**Lấy credentials từ Supabase Dashboard:**
+1. Vào project dashboard: https://app.supabase.com
+2. Settings → API
+3. Copy:
+   - Project URL
+   - anon public key (cho client)
+   - service_role key (cho server/admin - giữ bí mật)
+
+---
+
+## 3. CHI TIẾT CHỨC NĂNG
+
+## MODULE 1: AUTHENTICATION (XÁC THỰC)
+
+### 1.1. Đăng ký tài khoản
+**Mô tả:** Người dùng tạo tài khoản mới để bắt đầu sử dụng app
+
+**Yêu cầu chức năng:**
+- Nhập email
+- Nhập mật khẩu (tối thiểu 8 ký tự, có chữ và số)
+- Xác nhận mật khẩu
+- Nhập tên hiển thị
+- Tùy chọn: Đăng ký nhanh bằng Google/Apple
+- Đồng ý điều khoản sử dụng
+
+**Acceptance Criteria:**
+- Validate email đúng định dạng
+- Mật khẩu phải đủ mạnh (có chữ hoa, chữ thường, số)
+- Hai mật khẩu phải khớp nhau
+- Gửi email xác thực (optional cho MVP)
+- Tạo tài khoản thành công → Chuyển sang Onboarding
+
+### 1.2. Đăng nhập
+**Mô tả:** Người dùng đăng nhập vào app
+
+**Yêu cầu chức năng:**
+- Nhập email và mật khẩu
+- Tùy chọn: Đăng nhập bằng Google/Apple
+- Checkbox "Ghi nhớ đăng nhập"
+- Link "Quên mật khẩu"
+
+**Acceptance Criteria:**
+- Thông báo lỗi rõ ràng nếu sai email/mật khẩu
+- Giới hạn 5 lần đăng nhập sai → khóa 15 phút
+- Đăng nhập thành công → Về Home screen
+- Người dùng đã đăng nhập → Không cần đăng nhập lại
+
+### 1.3. Quên mật khẩu
+**Mô tả:** Khôi phục mật khẩu khi quên
+
+**Yêu cầu chức năng:**
+- Nhập email đã đăng ký
+- Hệ thống gửi email có link reset mật khẩu
+- Click link → Nhập mật khẩu mới
+- Xác nhận mật khẩu mới
+
+**Acceptance Criteria:**
+- Link reset có hiệu lực 15 phút
+- Mật khẩu mới không được trùng mật khẩu cũ
+- Thông báo thành công → Chuyển về màn hình đăng nhập
+
+### 1.4. Đăng xuất
+**Mô tả:** Đăng xuất khỏi tài khoản
+
+**Yêu cầu chức năng:**
+- Button đăng xuất ở Profile screen
+- Xác nhận trước khi đăng xuất
+- Clear session và về màn hình đăng nhập
+
+---
+
+## MODULE 2: ONBOARDING
+
+### 2.1. Welcome Screens
+**Mô tả:** Giới thiệu app cho người dùng lần đầu
+
+**Yêu cầu chức năng:**
+- 3-4 màn hình giới thiệu với illustration
+- Màn hình 1: Giới thiệu app và lợi ích
+- Màn hình 2: Tính năng theo dõi thu chi
+- Màn hình 3: Tính năng ngân sách và mục tiêu tiết kiệm
+- Màn hình 4: Call-to-action "Bắt đầu"
+- Có nút "Skip" để bỏ qua
+- Chấm chỉ báo (dot indicator) vị trí màn hình hiện tại
+
+**Acceptance Criteria:**
+- Hiển thị 1 lần duy nhất sau khi đăng ký
+- Có thể swipe hoặc click next
+- Click "Bắt đầu" → Chuyển sang Initial Setup
+
+### 2.2. Initial Setup
+**Mô tả:** Thiết lập ban đầu cho tài khoản
+
+**Yêu cầu chức năng:**
+- **Bước 1:** Chọn tiền tệ chính (VND, USD, EUR...)
+- **Bước 2:** Nhập số dư ban đầu (optional, có thể để 0)
+- **Bước 3:** Chọn hoặc tạo các category thường dùng
+  - Gợi ý sẵn các category phổ biến (Ăn uống, Đi lại, Giải trí...)
+  - Người dùng tick chọn category cần dùng
+  - Có thể thêm custom category
+- **Bước 4:** Đặt ngân sách tháng (optional, có thể bỏ qua)
+
+**Acceptance Criteria:**
+- Cho phép bỏ qua các bước optional
+- Dữ liệu setup được lưu vào profile
+- Hoàn thành setup → Chuyển về Home screen
+- Có thể quay lại bước trước
+
+---
+
+## MODULE 3: TRANSACTION MANAGEMENT (Quản lý giao dịch)
+
+### 3.1. Thêm giao dịch (Floating "Add" Button)
+**Mô tả:** Tạo giao dịch thu hoặc chi mới
+
+**Yêu cầu chức năng:**
+- Click Floating Add button → Mở bottom sheet hoặc modal
+- Toggle chọn loại: **Thu nhập (Income)** / **Chi tiêu (Expense)**
+- Nhập số tiền (Number keyboard, calculator style)
+- Chọn Category từ danh sách
+- Nhập ghi chú/mô tả (optional, max 200 ký tự)
+- Chọn ngày giao dịch (mặc định: hôm nay)
+- Button "Lưu" để hoàn tất
+
+**Acceptance Criteria:**
+- Số tiền phải lớn hơn 0
+- Phải chọn category
+- Default: Loại là "Chi tiêu", ngày là hôm nay
+- Lưu thành công → Thông báo toast "Đã thêm giao dịch"
+- Update balance và hiển thị trong Home screen ngay lập tức
+- Nếu là Chi tiêu: Kiểm tra budget của category → Cảnh báo nếu sắp đạt ngưỡng
+
+### 3.2. Xem danh sách giao dịch
+**Mô tả:** Hiển thị lịch sử các giao dịch đã tạo
+
+**Yêu cầu chức năng:**
+- Hiển thị ở Home screen
+- Group theo ngày (Today, Yesterday, 2 days ago...)
+- Mỗi item hiển thị:
+  - Icon và màu của category
+  - Tên category
+  - Ghi chú (nếu có)
+  - Số tiền (màu đỏ cho chi, xanh cho thu)
+  - Thời gian
+- Sắp xếp mới nhất lên đầu
+- Infinite scroll hoặc pagination
+
+**Acceptance Criteria:**
+- Load nhanh (< 1s cho 50 items)
+- Pull-to-refresh để cập nhật
+- Hiển thị empty state nếu chưa có giao dịch
+- Click vào item → Xem chi tiết và có option Sửa/Xóa
+
+### 3.3. Xem chi tiết giao dịch
+**Mô tả:** Xem đầy đủ thông tin của 1 giao dịch
+
+**Yêu cầu chức năng:**
+- Hiển thị đầy đủ:
+  - Loại giao dịch (Thu/Chi)
+  - Số tiền
+  - Category
+  - Ghi chú
+  - Ngày giờ tạo
+- Button "Sửa" và "Xóa"
+
+**Acceptance Criteria:**
+- Hiển thị trên modal hoặc full screen
+- Có button back/close
+
+### 3.4. Sửa giao dịch
+**Mô tả:** Chỉnh sửa thông tin giao dịch đã tạo
+
+**Yêu cầu chức năng:**
+- Cho phép sửa tất cả các trường
+- Pre-fill dữ liệu hiện tại
+- Validate giống như khi thêm mới
+
+**Acceptance Criteria:**
+- Balance được tính toán lại chính xác
+- Nếu thay đổi category hoặc số tiền của chi tiêu → Kiểm tra lại budget
+- Lưu thành công → Cập nhật trong danh sách
+
+### 3.5. Xóa giao dịch
+**Mô tả:** Xóa giao dịch không cần thiết
+
+**Yêu cầu chức năng:**
+- Hiển thị dialog xác nhận "Bạn có chắc muốn xóa?"
+- Button "Hủy" và "Xóa"
+
+**Acceptance Criteria:**
+- Balance được cập nhật lại (cộng lại số tiền chi, trừ đi số tiền thu)
+- Xóa khỏi danh sách ngay lập tức
+- Không thể khôi phục (hoặc có undo trong 5 giây - optional)
+
+### 3.6. Lọc và tìm kiếm giao dịch
+**Mô tả:** Tìm kiếm giao dịch theo tiêu chí
+
+**Yêu cầu chức năng:**
+- Search bar ở Home screen
+- Filter options:
+  - Theo loại: Tất cả / Thu / Chi
+  - Theo category: Chọn nhiều category
+  - Theo khoảng thời gian: Tuần này / Tháng này / Tháng trước / Custom range
+  - Theo số tiền: Từ ... đến ...
+- Button "Áp dụng" và "Reset filter"
+
+**Acceptance Criteria:**
+- Kết quả hiển thị real-time khi nhập search
+- Filter kết hợp được với search
+- Có thể clear filter dễ dàng
+- Hiển thị số lượng kết quả tìm thấy
+
+---
+
+## MODULE 4: CATEGORY MANAGEMENT (Quản lý danh mục)
+
+### 4.1. Danh mục mặc định của hệ thống
+**Mô tả:** Hệ thống cung cấp sẵn các category phổ biến
+
+**Category Thu nhập (Income):**
+- 💰 Lương
+- 🎁 Thưởng
+- 📈 Đầu tư
+- 💼 Công việc thêm
+- 🎯 Thu nhập khác
+
+**Category Chi tiêu (Expense):**
+- 🍔 Ăn uống
+- 🚗 Đi lại
+- 🛒 Mua sắm
+- 🎮 Giải trí
+- 💊 Sức khỏe
+- 🏠 Nhà cửa
+- 📚 Giáo dục
+- 👨‍👩‍👧 Gia đình
+- 📱 Hóa đơn & Dịch vụ
+- 💇 Chăm sóc cá nhân
+- 🎁 Quà tặng
+- 📦 Khác
+
+**Acceptance Criteria:**
+- Người dùng không thể xóa category mặc định
+- Có thể sửa tên và icon của category mặc định
+- Mỗi category có icon và màu riêng biệt
+
+### 4.2. Tạo category mới
+**Mô tả:** Người dùng tạo category tùy chỉnh
+
+**Yêu cầu chức năng:**
+- Truy cập từ: Profile → "Quản lý danh mục" → Button "Thêm danh mục"
+- Chọn loại: Thu nhập / Chi tiêu
+- Nhập tên category (max 30 ký tự)
+- Chọn icon từ thư viện icon có sẵn
+- Chọn màu (từ palette màu có sẵn)
+
+**Acceptance Criteria:**
+- Tên không được trùng với category đã có (trong cùng loại)
+- Tên không được để trống
+- Tạo thành công → Thêm vào danh sách category
+- Category mới có thể dùng ngay khi thêm giao dịch
+
+### 4.3. Sửa category
+**Mô tả:** Chỉnh sửa thông tin category
+
+**Yêu cầu chức năng:**
+- Sửa tên, icon, màu sắc
+- Không được đổi loại (Thu/Chi)
+
+**Acceptance Criteria:**
+- Tên mới không trùng với category khác
+- Các giao dịch liên quan được cập nhật icon/màu mới
+- Lưu thành công → Quay về danh sách category
+
+### 4.4. Xóa category
+**Mô tả:** Xóa category không còn dùng
+
+**Yêu cầu chức năng:**
+- Chỉ xóa được category do người dùng tạo
+- Kiểm tra xem có giao dịch nào dùng category này không
+- Nếu có giao dịch: Yêu cầu chọn category thay thế trước khi xóa
+- Nếu không có giao dịch: Xóa trực tiếp
+
+**Acceptance Criteria:**
+- Hiển thị dialog cảnh báo trước khi xóa
+- Nếu có giao dịch: Hiển thị số lượng và yêu cầu migrate
+- Xóa thành công → Xóa khỏi danh sách
+- Các giao dịch được chuyển sang category mới
+
+### 4.5. Xem danh sách category
+**Mô tả:** Hiển thị tất cả category
+
+**Yêu cầu chức năng:**
+- Truy cập từ Profile → "Quản lý danh mục"
+- Group theo 2 tab: Thu nhập / Chi tiêu
+- Mỗi category hiển thị:
+  - Icon và màu
+  - Tên
+  - Số lượng giao dịch (optional)
+  - Tổng số tiền (optional)
+- Button "Thêm category" ở cuối danh sách
+
+**Acceptance Criteria:**
+- Load nhanh
+- Click vào item → Xem chi tiết và option Sửa/Xóa
+- Category mặc định có badge "Mặc định"
+
+---
+
+## MODULE 5: BUDGET MANAGEMENT (Tab "Budget")
+
+### 5.1. Tạo budget cho category chi tiêu
+**Mô tả:** Đặt giới hạn chi tiêu cho từng category
+
+**Yêu cầu chức năng:**
+- Truy cập từ tab Budget → Button "Thêm ngân sách"
+- Chọn category chi tiêu (chỉ hiển thị category chưa có budget)
+- Nhập số tiền ngân sách
+- Chọn chu kỳ: **Tháng này** (mặc định) / Tháng / Quý / Năm
+- Optional: Bật cảnh báo khi đạt % ngưỡng (70%, 80%, 90%)
+
+**Acceptance Criteria:**
+- Số tiền budget phải > 0
+- Một category chỉ có 1 budget trong 1 chu kỳ
+- Lưu thành công → Hiển thị trong Budget screen
+- Tự động reset khi hết chu kỳ (sang tháng mới)
+
+### 5.2. Hiển thị danh sách budget (Budget Screen)
+**Mô tả:** Xem tổng quan các budget đang tracking
+
+**Yêu cầu chức năng:**
+- Tab Budget là screen chính
+- Hiển thị ở đầu:
+  - **Tổng ngân sách tháng này**: Tổng budget của tất cả category
+  - **Đã chi**: Tổng chi tiêu thực tế
+  - **Còn lại**: Budget - Chi tiêu
+  - Progress bar tổng
+- Danh sách các category có budget:
+  - Icon và tên category
+  - Progress bar (Đã chi / Budget)
+  - Số tiền đã chi / Budget
+  - % đã sử dụng
+  - Màu progress bar:
+    - Xanh: < 70%
+    - Vàng: 70-89%
+    - Đỏ: ≥ 90%
+- Sắp xếp: Category vượt ngân sách lên đầu
+- Button "Thêm ngân sách"
+
+**Acceptance Criteria:**
+- Cập nhật real-time khi có giao dịch chi tiêu mới
+- Pull-to-refresh
+- Hiển thị empty state nếu chưa có budget nào
+- Click vào category → Xem chi tiết budget
+
+### 5.3. Xem chi tiết budget của category
+**Mô tả:** Xem chi tiết budget và các giao dịch liên quan
+
+**Yêu cầu chức năng:**
+- Hiển thị:
+  - Tên category và icon
+  - Budget amount
+  - Số tiền đã chi
+  - Số tiền còn lại
+  - % đã dùng
+  - Chu kỳ (Tháng X/2025)
+  - Progress bar lớn
+- **Danh sách giao dịch** thuộc category này trong chu kỳ hiện tại
+  - Sắp xếp mới nhất lên đầu
+  - Click vào giao dịch → Xem chi tiết/Sửa/Xóa
+- Button "Sửa ngân sách" và "Xóa ngân sách"
+
+**Acceptance Criteria:**
+- Số liệu chính xác
+- Danh sách giao dịch chỉ trong chu kỳ budget
+- Easy navigation về Budget screen
+
+### 5.4. Sửa budget
+**Mô tả:** Thay đổi số tiền budget
+
+**Yêu cầu chức năng:**
+- Cho phép sửa số tiền budget
+- Có thể thay đổi chu kỳ (nếu cần)
+- Có thể bật/tắt cảnh báo
+
+**Acceptance Criteria:**
+- Số tiền mới > 0
+- Lưu thành công → Cập nhật ngay trong Budget screen
+- Progress bar được tính toán lại
+
+### 5.5. Xóa budget
+**Mô tả:** Xóa budget không còn tracking
+
+**Yêu cầu chức năng:**
+- Hiển thị dialog xác nhận
+- Xác nhận → Xóa budget
+- Các giao dịch vẫn giữ nguyên, chỉ xóa budget setting
+
+**Acceptance Criteria:**
+- Xóa khỏi danh sách Budget screen
+- Không ảnh hưởng đến dữ liệu giao dịch
+
+### 5.6. Cảnh báo vượt ngân sách
+**Mô tả:** Thông báo khi chi tiêu gần đạt hoặc vượt budget
+
+**Yêu cầu chức năng:**
+- Khi thêm giao dịch chi tiêu:
+  - Nếu category có budget → Kiểm tra % đã dùng
+  - Nếu đạt ngưỡng cảnh báo (70%, 80%, 90%) → Hiển thị alert/notification
+  - Nếu vượt 100% → Cảnh báo đậm "Bạn đã vượt ngân sách!"
+- In-app notification:
+  - Icon màu đỏ trên Budget tab khi có category vượt budget
+  - Badge số lượng category vượt budget
+
+**Acceptance Criteria:**
+- Cảnh báo hiển thị ngay khi thêm giao dịch
+- Có option "Không hiển thị lại" cho từng category
+- Cảnh báo không làm gián đoạn quá trình thêm giao dịch
+
+---
+
+## MODULE 6: SAVING GOALS (Mục tiêu tiết kiệm)
+
+### 6.1. Hiển thị Net Balance
+**Mô tả:** Tính và hiển thị số dư ròng - Đây là số tiền thực tế còn lại sau khi trừ chi tiêu
+
+**Công thức:**
+```
+Net Balance = Tổng Thu nhập (Income) - Tổng Chi tiêu (Expense)
+```
+
+**Yêu cầu chức năng:**
+- Hiển thị ở Home screen (top card):
+  - **Current Balance**: Net balance hiện tại (tổng tất cả thu - tổng tất cả chi từ trước đến nay)
+  - **Income tháng này**: Tổng thu tháng này
+  - **Expense tháng này**: Tổng chi tháng này
+  - **Net This Month**: Thu - Chi của tháng này
+- Cập nhật real-time khi có giao dịch
+- Màu sắc:
+  - Xanh nếu Balance > 0
+  - Đỏ nếu Balance < 0
+
+**Acceptance Criteria:**
+- Tính toán chính xác 100%
+- Net Balance là số tiền tích lũy từ tất cả giao dịch
+- Responsive với các giao dịch thêm/sửa/xóa
+- Đây chính là số tiền có thể dùng để phân bổ cho các Saving Goal
+
+### 6.2. Tạo Saving Goal
+**Mô tả:** Tạo mục tiêu tiết kiệm để theo dõi việc dành dụm từ Net Balance
+
+**Concept:**
+- Saving Goal là mục tiêu tiết kiệm mà người dùng muốn đạt được (VD: Mua laptop, Du lịch...)
+- Tiến độ Goal được tracking dựa trên **Net Balance tích lũy** từ ngày bắt đầu goal
+- Công thức: `Tiền đã tiết kiệm cho Goal = (Tổng Income - Tổng Expense) từ Start Date đến hiện tại`
+
+**Yêu cầu chức năng:**
+- Truy cập từ: Profile → "Mục tiêu tiết kiệm" → Button "Thêm mục tiêu"
+- Nhập tên mục tiêu (VD: "Mua laptop", "Du lịch Đà Lạt")
+- Nhập số tiền mục tiêu
+- Chọn ngày bắt đầu (default: hôm nay)
+- Chọn ngày đạt mục tiêu (target date)
+- Chọn icon và màu (optional)
+- Thêm ghi chú (optional)
+
+**Tính toán tự động:**
+- Số tháng còn lại = (Target date - Start date) / 30
+- Cần tiết kiệm mỗi tháng = Số tiền mục tiêu / Số tháng
+- Hiển thị gợi ý: "Bạn cần Net Balance dương X VND/tháng để đạt mục tiêu"
+
+**Acceptance Criteria:**
+- Số tiền mục tiêu > 0
+- Target date phải sau Start date
+- Tạo thành công → Thêm vào danh sách goal
+- Hiển thị gợi ý rõ ràng về số tiền cần tiết kiệm
+- Giải thích: "Tiến độ sẽ được tính từ Net Balance tích lũy từ ngày bắt đầu"
+
+### 6.3. Xem danh sách Saving Goals
+**Mô tả:** Hiển thị tất cả mục tiêu đang theo dõi với tiến độ real-time
+
+**Yêu cầu chức năng:**
+- Truy cập từ Profile → "Mục tiêu tiết kiệm"
+- Mỗi goal hiển thị:
+  - Icon và tên mục tiêu
+  - Progress bar (Đã tiết kiệm / Mục tiêu)
+  - Số tiền đã tiết kiệm / Mục tiêu
+  - % hoàn thành
+  - Thời gian còn lại (X tháng Y ngày)
+- Sắp xếp: Gần đạt mục tiêu lên đầu
+- Button "Thêm mục tiêu"
+
+**Cách tính "Đã tiết kiệm":**
+```
+Đã tiết kiệm cho Goal = Net Balance tích lũy từ Start Date đến hiện tại
+                      = (Tổng Income - Tổng Expense) trong khoảng thời gian đó
+```
+
+**Ví dụ:**
+- Goal "Mua laptop 20 triệu" bắt đầu ngày 1/1/2025
+- Từ 1/1 đến nay:
+  - Tổng thu: 30 triệu
+  - Tổng chi: 18 triệu
+  - Net Balance tích lũy: 30 - 18 = 12 triệu
+  - → Tiến độ Goal: 12/20 triệu = 60%
+
+**Acceptance Criteria:**
+- Cập nhật tiến độ tự động mỗi khi có giao dịch thu/chi mới
+- Chỉ tính các giao dịch từ Start Date trở đi
+- Highlight goal đã hoàn thành (≥ 100%)
+- Empty state nếu chưa có goal nào
+- Tooltip giải thích: "Tiến độ = (Thu - Chi) từ ngày bắt đầu mục tiêu"
+
+### 6.4. Xem chi tiết Saving Goal
+**Mô tả:** Xem chi tiết tiến độ, phân tích và đề xuất
+
+**Yêu cầu chức năng:**
+- Hiển thị:
+  - Tên và icon mục tiêu
+  - Số tiền mục tiêu
+  - Số tiền đã tiết kiệm (Net Balance tích lũy từ Start Date)
+  - Số tiền còn thiếu
+  - % hoàn thành
+  - Progress bar lớn
+  - Ngày bắt đầu và ngày kết thúc
+  - Thời gian còn lại
+  
+- **Phân tích chi tiết:**
+  - **Kế hoạch:** Cần tiết kiệm X VND/tháng (target amount / số tháng)
+  - **Thực tế:** Đang tiết kiệm Y VND/tháng (Net Balance tích lũy / số tháng đã qua)
+  - **Đánh giá:** 
+    - Nếu Y ≥ X: "✅ Bạn đang on track! Tiếp tục phát huy!"
+    - Nếu Y < X: "⚠️ Cần tăng tốc! Thiếu Z VND/tháng so với kế hoạch"
+  
+- **Biểu đồ tiến độ** theo tháng (Line chart)
+  - Đường kế hoạch (tăng tuyến tính từ 0 đến target)
+  - Đường thực tế (Net Balance tích lũy theo thời gian)
+  - So sánh trực quan giữa kế hoạch và thực tế
+
+- **Chi tiết thu chi trong thời gian Goal:**
+  - Tổng thu từ Start Date
+  - Tổng chi từ Start Date
+  - Average net balance/tháng
+  
+- Button "Sửa" và "Xóa"
+
+**Acceptance Criteria:**
+- Phân tích chính xác dựa trên Net Balance thực tế
+- Biểu đồ cập nhật real-time
+- Feedback rõ ràng, động viên người dùng
+- Giúp người dùng hiểu rõ họ đang tiết kiệm như thế nào
+
+### 6.5. Sửa Saving Goal
+**Mô tả:** Chỉnh sửa thông tin mục tiêu
+
+**Yêu cầu chức năng:**
+- Cho phép sửa: Tên, số tiền mục tiêu, target date, icon, màu, ghi chú
+- Không đổi start date (để giữ tính toàn vẹn dữ liệu)
+- Tính toán lại các chỉ số khi thay đổi
+
+**Acceptance Criteria:**
+- Validate giống như khi tạo mới
+- Lưu thành công → Cập nhật trong danh sách
+
+### 6.6. Xóa Saving Goal
+**Mô tả:** Xóa mục tiêu không còn theo dõi
+
+**Yêu cầu chức năng:**
+- Dialog xác nhận "Bạn có chắc muốn xóa mục tiêu này?"
+- Xác nhận → Xóa goal
+- Không ảnh hưởng đến giao dịch
+
+**Acceptance Criteria:**
+- Xóa khỏi danh sách ngay lập tức
+
+### 6.7. Đánh dấu Goal hoàn thành
+**Mô tả:** Đánh dấu mục tiêu đã đạt được
+
+**Yêu cầu chức năng:**
+- Tự động: Khi % ≥ 100% → Badge "Hoàn thành" màu vàng
+- Thủ công: Button "Đánh dấu hoàn thành" trong chi tiết goal
+- Goal hoàn thành:
+  - Hiển thị badge "Completed"
+  - Chuyển xuống cuối danh sách hoặc tab riêng
+  - Có option "Lưu trữ" (ẩn khỏi danh sách chính)
+
+**Acceptance Criteria:**
+- Celebration animation khi đạt 100%
+- Có thể bỏ đánh dấu hoàn thành (reopen goal)
+
+---
+
+## MODULE 7: ANALYSIS & REPORTS (Tab "Analysis")
+
+### 7.1. Tổng quan (Analysis Home)
+**Mô tả:** Dashboard phân tích tài chính
+
+**Yêu cầu chức năng:**
+- Chọn khoảng thời gian ở đầu trang:
+  - Tuần này / Tháng này / 3 tháng / 6 tháng / Năm nay / Custom
+- **Section 1: Income vs Expense**
+  - Biểu đồ cột so sánh Thu và Chi theo thời gian (ngày/tuần/tháng)
+  - Hiển thị Net Balance
+  - Tăng/giảm % so với kỳ trước
+- **Section 2: Expense by Category**
+  - Biểu đồ tròn (Pie chart) phân bố chi tiêu theo category
+  - Hiển thị % và số tiền của top 5 category
+  - Button "Xem chi tiết" → Expense Breakdown
+- **Section 3: Spending Trend**
+  - Biểu đồ đường xu hướng chi tiêu theo thời gian
+  - So sánh với tháng trước
+
+**Acceptance Criteria:**
+- Biểu đồ tải nhanh (< 2s)
+- Interactive: Click vào biểu đồ để xem chi tiết
+- Responsive với mọi khoảng thời gian
+
+### 7.2. Chi tiết chi tiêu theo Category
+**Mô tả:** Phân tích sâu chi tiêu của từng category
+
+**Yêu cầu chức năng:**
+- Danh sách tất cả category chi tiêu
+- Mỗi category hiển thị:
+  - Icon và tên
+  - Tổng chi trong kỳ
+  - % so với tổng chi tiêu
+  - Số lượng giao dịch
+  - So sánh với kỳ trước (tăng/giảm %)
+- Sắp xếp theo số tiền giảm dần
+- Click vào category → Xem danh sách giao dịch của category đó
+
+**Acceptance Criteria:**
+- Tính toán chính xác
+- Có thể filter theo khoảng thời gian
+
+### 7.3. So sánh thu chi theo thời gian
+**Mô tả:** So sánh thu chi giữa các kỳ
+
+**Yêu cầu chức năng:**
+- Chọn 2 khoảng thời gian để so sánh
+- Hiển thị bảng so sánh:
+  - Thu nhập: Kỳ 1 vs Kỳ 2 (chênh lệch %)
+  - Chi tiêu: Kỳ 1 vs Kỳ 2 (chênh lệch %)
+  - Net Balance: Kỳ 1 vs Kỳ 2
+- So sánh theo category:
+  - Top category tăng nhiều nhất
+  - Top category giảm nhiều nhất
+
+**Acceptance Criteria:**
+- Dễ dàng đọc và hiểu insights
+- Highlight những thay đổi đáng chú ý
+
+### 7.4. Xuất báo cáo
+**Mô tả:** Export dữ liệu ra file
+
+**Yêu cầu chức năng:**
+- Button "Xuất báo cáo" ở Analysis screen
+- Chọn khoảng thời gian
+- Chọn định dạng: PDF / Excel (CSV)
+- **Nội dung báo cáo:**
+  - Tổng quan thu chi
+  - Chi tiết giao dịch
+  - Phân tích theo category
+  - Biểu đồ (nếu là PDF)
+- Lưu vào thiết bị hoặc share qua email/app khác
+
+**Acceptance Criteria:**
+- File đầy đủ, format đẹp
+- CSV: Dễ dàng import vào Excel/Google Sheets
+- PDF: Layout chuyên nghiệp, có logo app
+
+---
+
+## MODULE 8: PROFILE & SETTINGS (Tab "Profile")
+
+### 8.1. Thông tin cá nhân
+**Mô tả:** Hiển thị và chỉnh sửa profile
+
+**Yêu cầu chức năng:**
+- Avatar (có thể upload ảnh hoặc chọn từ thư viện)
+- Tên hiển thị
+- Email (không thể sửa)
+- Button "Sửa hồ sơ"
+
+**Acceptance Criteria:**
+- Upload ảnh: Max 5MB, format JPG/PNG
+- Tên hiển thị: Max 50 ký tự
+- Lưu thành công → Cập nhật trên toàn app
+
+### 8.2. Cài đặt ứng dụng
+**Mô tả:** Các thiết lập chung
+
+**Yêu cầu chức năng:**
+- **Tiền tệ:** Chọn tiền tệ mặc định (VND, USD, EUR...)
+- **Ngôn ngữ:** Tiếng Việt / English
+- **Theme:** Sáng / Tối / Theo hệ thống
+- **Định dạng ngày:** DD/MM/YYYY hoặc MM/DD/YYYY
+- **Bắt đầu tuần:** Chủ nhật / Thứ hai
+- **Bắt đầu tháng:** Ngày 1 / Ngày X (cho ngân sách)
+
+**Acceptance Criteria:**
+- Áp dụng ngay lập tức
+- Lưu cài đặt vào local storage
+
+### 8.3. Thông báo
+**Mô tả:** Quản lý thông báo
+
+**Yêu cầu chức năng:**
+- Toggle bật/tắt:
+  - Thông báo chung
+  - Cảnh báo ngân sách
+  - Nhắc nhở mục tiêu tiết kiệm
+  - Nhắc nhở giao dịch định kỳ (nếu có tính năng này)
+- Chọn thời gian nhận thông báo (VD: 20:00 mỗi ngày)
+
+**Acceptance Criteria:**
+- Tắt thông báo → Không gửi notification
+- Bật thông báo → Request permission (iOS/Android)
+
+### 8.4. Bảo mật
+**Mô tả:** Cài đặt bảo mật tài khoản
+
+**Yêu cầu chức năng:**
+- **Đổi mật khẩu:**
+  - Nhập mật khẩu cũ
+  - Nhập mật khẩu mới
+  - Xác nhận mật khẩu mới
+- **Khóa ứng dụng:**
+  - Bật/tắt khóa bằng PIN/Sinh trắc học
+  - Đặt PIN 4-6 số
+  - Bật Face ID / Touch ID / Fingerprint
+  - Chọn thời gian khóa (Ngay lập tức / 1 phút / 5 phút)
+- **Đăng xuất tất cả thiết bị** (nếu có đồng bộ)
+
+**Acceptance Criteria:**
+- Đổi mật khẩu thành công → Đăng xuất và yêu cầu đăng nhập lại
+- Khóa app hoạt động khi mở app sau khi timeout
+- Sinh trắc học: Fallback về PIN nếu thất bại
+
+### 8.5. Sao lưu & Khôi phục
+**Mô tả:** Backup và restore dữ liệu
+
+**Yêu cầu chức năng:**
+- **Sao lưu tự động:**
+  - Bật/tắt auto backup
+  - Chọn tần suất: Hàng ngày / Hàng tuần
+  - Backup lên cloud (Google Drive / iCloud) hoặc local
+- **Sao lưu thủ công:**
+  - Button "Sao lưu ngay"
+  - Tiến trình backup hiển thị rõ ràng
+  - Thông báo "Sao lưu thành công"
+- **Khôi phục:**
+  - Chọn file backup từ cloud hoặc local
+  - Cảnh báo: "Dữ liệu hiện tại sẽ bị ghi đè"
+  - Xác nhận → Restore
+  - Loading → Thông báo thành công → Reload app
+
+**Acceptance Criteria:**
+- Backup bao gồm: Giao dịch, Category, Budget, Goals, Settings
+- Backup được mã hóa
+- Restore chính xác 100%
+
+### 8.6. Quản lý danh mục
+**Mô tả:** Link tới Category Management (Module 4)
+
+**Yêu cầu chức năng:**
+- Menu item "Quản lý danh mục" → Navigate tới Category screen
+
+### 8.7. Mục tiêu tiết kiệm
+**Mô tả:** Link tới Saving Goals (Module 6)
+
+**Yêu cầu chức năng:**
+- Menu item "Mục tiêu tiết kiệm" → Navigate tới Saving Goals screen
+
+### 8.8. Giới thiệu & Hỗ trợ
+**Mô tả:** Thông tin và hỗ trợ người dùng
+
+**Yêu cầu chức năng:**
+- **Về ứng dụng:**
+  - Tên app, version, logo
+  - Mô tả ngắn
+- **Hướng dẫn sử dụng:**
+  - Xem lại Onboarding
+  - FAQ / Câu hỏi thường gặp
+- **Liên hệ hỗ trợ:**
+  - Email support
+  - Social media links
+- **Đánh giá ứng dụng:**
+  - Link tới App Store / Google Play để review
+
+**Acceptance Criteria:**
+- Link hoạt động chính xác
+- Email support có sẵn template
+
+### 8.9. Chính sách & Điều khoản
+**Mô tả:** Hiển thị các chính sách
+
+**Yêu cầu chức năng:**
+- Điều khoản sử dụng (Terms of Service)
+- Chính sách bảo mật (Privacy Policy)
+- Hiển thị trên web view hoặc PDF
+
+**Acceptance Criteria:**
+- Nội dung đầy đủ, dễ đọc
+
+### 8.10. Xóa tài khoản
+**Mô tả:** Xóa vĩnh viễn tài khoản và dữ liệu
+
+**Yêu cầu chức năng:**
+- Menu item "Xóa tài khoản" (màu đỏ, ở cuối cùng)
+- Click → Dialog cảnh báo nghiêm trọng:
+  - "Bạn có chắc chắn muốn xóa tài khoản?"
+  - "Toàn bộ dữ liệu của bạn sẽ bị xóa vĩnh viễn và không thể khôi phục"
+- Yêu cầu nhập mật khẩu để xác nhận
+- Button "Hủy" (nổi bật) và "Xóa tài khoản" (màu đỏ)
+
+**Acceptance Criteria:**
+- Xóa tất cả dữ liệu người dùng
+- Xóa tài khoản khỏi hệ thống
+- Logout và về màn hình Login
+
+---
+
+## 4. USER FLOW CHÍNH
+
+### Flow 1: First Time User
+```
+Mở app lần đầu
+  → Đăng ký tài khoản
+  → Onboarding (Welcome screens)
+  → Initial Setup (Tiền tệ, Số dư, Category, Budget)
+  → Home screen
+  → Thêm giao dịch đầu tiên
+```
+
+### Flow 2: Thêm giao dịch
+```
+Home screen
+  → Click Floating "Add" button
+  → Chọn loại (Thu/Chi)
+  → Nhập số tiền
+  → Chọn Category
+  → Nhập ghi chú (optional)
+  → Click "Lưu"
+  → Thông báo thành công
+  → Về Home screen (giao dịch hiển thị ngay)
+```
+
+### Flow 3: Quản lý ngân sách
+```
+Tab Budget
+  → Click "Thêm ngân sách"
+  → Chọn category chi tiêu
+  → Nhập số tiền budget
+  → Lưu
+  → Budget hiển thị trong danh sách
+  → Khi thêm giao dịch chi → Kiểm tra budget → Cảnh báo nếu cần
+```
+
+### Flow 4: Tạo và theo dõi mục tiêu tiết kiệm
+```
+Profile → Mục tiêu tiết kiệm
+  → Click "Thêm mục tiêu"
+  → Nhập tên: "Mua Macbook"
+  → Số tiền: 30,000,000 VND
+  → Start date: 01/01/2025
+  → Target date: 01/06/2025 (6 tháng)
+  → Lưu
+  → Hệ thống tính: Cần tiết kiệm 5,000,000/tháng
+  → Goal hiển thị trong danh sách
+
+Theo dõi tiến độ:
+  → Giả sử đến 01/03/2025 (2 tháng sau):
+  → Tổng thu từ 01/01: 25,000,000
+  → Tổng chi từ 01/01: 16,000,000  
+  → Net Balance tích lũy: 9,000,000
+  → Tiến độ Goal: 9tr/30tr = 30%
+  → Thực tế tiết kiệm: 4,500,000/tháng
+  → Đánh giá: "Cần tăng tốc! Thiếu 500k/tháng"
+```
+
+### Flow 5: Xem phân tích
+```
+Tab Analysis
+  → Chọn khoảng thời gian
+  → Xem biểu đồ thu chi
+  → Click vào category trong pie chart
+  → Xem chi tiết giao dịch của category
+  → Quay lại Analysis
+  → Export báo cáo (nếu cần)
+```
+
+---
+
+## 5. YÊU CẦU PHI CHỨC NĂNG
+
+### 5.1. Performance
+- Thời gian mở app < 2s
+- Thời gian thêm giao dịch < 1s
+- Biểu đồ render < 2s
+- Hỗ trợ offline mode (local database)
+- Sync với server khi có internet
+
+### 5.2. Security
+- Mã hóa dữ liệu nhạy cảm (mật khẩu, giao dịch)
+- HTTPS cho tất cả API
+- Token-based authentication (JWT)
+- Session timeout: 30 ngày (remember me) hoặc 1 ngày
+- Khóa app bằng PIN/Biometric
+
+### 5.3. Usability
+- Giao diện đơn giản, trực quan
+- Màu sắc phân biệt rõ ràng (Thu: xanh, Chi: đỏ)
+- Feedback rõ ràng cho mọi hành động (toast, animation)
+- Hỗ trợ dark mode
+- Font size đọc dễ dàng
+
+
+## 6. PHÂN LOẠI ƯU TIÊN (MoSCoW)
+
+### MUST HAVE (P0) - Bắt buộc cho MVP
+
+**Module 1: Authentication**
+- 1.1 Đăng ký
+- 1.2 Đăng nhập
+- 1.4 Đăng xuất
+
+**Module 2: Onboarding**
+- 2.1 Welcome Screens
+- 2.2 Initial Setup
+
+**Module 3: Transaction**
+- 3.1 Thêm giao dịch
+- 3.2 Xem danh sách giao dịch
+- 3.3 Xem chi tiết
+- 3.4 Sửa giao dịch
+- 3.5 Xóa giao dịch
+
+**Module 4: Category**
+- 4.1 Danh mục mặc định
+- 4.2 Tạo category
+- 4.5 Xem danh sách
+
+**Module 5: Budget**
+- 5.1 Tạo budget
+- 5.2 Hiển thị danh sách budget
+- 5.6 Cảnh báo vượt ngân sách
+
+**Module 6: Saving Goals**
+- 6.1 Hiển thị Net Balance
+- 6.2 Tạo Saving Goal
+- 6.3 Xem danh sách
+
+**Module 7: Analysis**
+- 7.1 Tổng quan (biểu đồ cơ bản)
+- 7.2 Chi tiết theo Category
+
+**Module 8: Profile**
+- 8.1 Thông tin cá nhân
+- 8.2 Cài đặt ứng dụng
+- 8.4 Bảo mật (đổi mật khẩu)
+
+---
+
+### SHOULD HAVE (P1) - Quan trọng, phase 2
+
+**Module 1: Authentication**
+- 1.3 Quên mật khẩu
+
+**Module 3: Transaction**
+- 3.6 Lọc và tìm kiếm
+
+**Module 4: Category**
+- 4.3 Sửa category
+- 4.4 Xóa category
+
+**Module 5: Budget**
+- 5.3 Xem chi tiết budget
+- 5.4 Sửa budget
+- 5.5 Xóa budget
+
+**Module 6: Saving Goals**
+- 6.4 Xem chi tiết Goal
+- 6.5 Sửa Goal
+- 6.6 Xóa Goal
+- 6.7 Đánh dấu hoàn thành
+
+**Module 7: Analysis**
+- 7.3 So sánh theo thời gian
+- 7.4 Xuất báo cáo
+
+**Module 8: Profile**
+- 8.3 Thông báo
+- 8.4 Bảo mật (Khóa app)
+- 8.5 Sao lưu & Khôi phục
+- 8.8 Giới thiệu & Hỗ trợ
+
+---
+
+## 8. TECH STACK
+
+### Frontend (Mobile)
+- **Framework:** React Native 
+- **State Management:** Zustand 
+- **Charts:** React Native Chart Kit 
+- **UI Library:** React Native Paper / NativeBase
+- **Navigation:** React Navigation
+- **Supabase Client:** @supabase/supabase-js
+
+### Backend & Database
+- **BaaS Platform:** **Supabase** (Backend-as-a-Service)
+- **Database:** PostgreSQL (managed by Supabase)
+- **Authentication:** Supabase Auth (built-in)
+  - Email/Password
+- **Storage:** Supabase Storage (cho avatar, backup files)
+- **Real-time:** Supabase Realtime (optional cho sync)
+- **Edge Functions:** Supabase Edge Functions (cho business logic phức tạp)
+
+---
+
+## 9. DATABASE SCHEMA (Supabase/PostgreSQL)
+
+### Tổng quan
+- Supabase sử dụng PostgreSQL với schema `auth` cho authentication
+- App schema sử dụng schema `public`
+- Tất cả tables có Row Level Security (RLS) enabled
+- Primary keys sử dụng UUID
+- Timestamps sử dụng `timestamptz` (timezone-aware)
+
+---
+
+### 1. profiles
+*Extend thông tin từ auth.users*
+
+```sql
+CREATE TABLE public.profiles (
+  id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+  email TEXT NOT NULL,
+  name TEXT,
+  avatar_url TEXT,
+  currency TEXT DEFAULT 'VND' NOT NULL,
+  language TEXT DEFAULT 'vi' NOT NULL,
+  theme TEXT DEFAULT 'light' NOT NULL, -- light, dark, auto
+  date_format TEXT DEFAULT 'DD/MM/YYYY' NOT NULL,
+  week_start INTEGER DEFAULT 1 NOT NULL, -- 0: Sunday, 1: Monday
+  month_start INTEGER DEFAULT 1 NOT NULL, -- 1-31
+  notifications_enabled BOOLEAN DEFAULT true NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+-- RLS Policies
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own profile"
+  ON public.profiles FOR SELECT
+  USING (auth.uid() = id);
+
+CREATE POLICY "Users can update own profile"
+  ON public.profiles FOR UPDATE
+  USING (auth.uid() = id);
+
+-- Indexes
+CREATE INDEX profiles_email_idx ON public.profiles(email);
+
+-- Trigger to auto-update updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_profiles_updated_at
+  BEFORE UPDATE ON public.profiles
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- Function to auto-create profile on signup
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $
+BEGIN
+  INSERT INTO public.profiles (id, email, name)
+  VALUES (NEW.id, NEW.email, NEW.raw_user_meta_data->>'name');
+  RETURN NEW;
+END;
+$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_new_user();
+```
+
+---
+
+### 2. categories
+*Danh mục thu chi*
+
+```sql
+CREATE TABLE public.categories (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('income', 'expense')),
+  icon TEXT NOT NULL DEFAULT '💰',
+  color TEXT NOT NULL DEFAULT '#3B82F6',
+  is_default BOOLEAN DEFAULT false NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  
+  -- Constraints
+  UNIQUE(user_id, name, type), -- Không trùng tên trong cùng loại cho 1 user
+  CHECK (name != '')
+);
+
+-- RLS Policies
+ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own categories"
+  ON public.categories FOR SELECT
+  USING (auth.uid() = user_id OR user_id IS NULL); -- NULL = default categories
+
+CREATE POLICY "Users can create own categories"
+  ON public.categories FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own categories"
+  ON public.categories FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own categories"
+  ON public.categories FOR DELETE
+  USING (auth.uid() = user_id AND is_default = false);
+
+-- Indexes
+CREATE INDEX categories_user_id_idx ON public.categories(user_id);
+CREATE INDEX categories_type_idx ON public.categories(type);
+CREATE INDEX categories_user_type_idx ON public.categories(user_id, type);
+
+-- Trigger for updated_at
+CREATE TRIGGER update_categories_updated_at
+  BEFORE UPDATE ON public.categories
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+```
+
+---
+
+### 3. transactions
+*Giao dịch thu chi*
+
+```sql
+CREATE TABLE public.transactions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('income', 'expense')),
+  amount DECIMAL(15, 2) NOT NULL CHECK (amount > 0),
+  category_id UUID REFERENCES public.categories(id) ON DELETE RESTRICT NOT NULL,
+  note TEXT,
+  date DATE NOT NULL DEFAULT CURRENT_DATE,
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+-- RLS Policies
+ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own transactions"
+  ON public.transactions FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can create own transactions"
+  ON public.transactions FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own transactions"
+  ON public.transactions FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own transactions"
+  ON public.transactions FOR DELETE
+  USING (auth.uid() = user_id);
+
+-- Indexes
+CREATE INDEX transactions_user_id_idx ON public.transactions(user_id);
+CREATE INDEX transactions_date_idx ON public.transactions(date DESC);
+CREATE INDEX transactions_category_id_idx ON public.transactions(category_id);
+CREATE INDEX transactions_user_date_idx ON public.transactions(user_id, date DESC);
+CREATE INDEX transactions_user_type_idx ON public.transactions(user_id, type);
+
+-- Trigger for updated_at
+CREATE TRIGGER update_transactions_updated_at
+  BEFORE UPDATE ON public.transactions
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+```
+
+---
+
+### 4. budgets
+*Ngân sách theo category*
+
+```sql
+CREATE TABLE public.budgets (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  category_id UUID REFERENCES public.categories(id) ON DELETE CASCADE NOT NULL,
+  amount DECIMAL(15, 2) NOT NULL CHECK (amount > 0),
+  period TEXT NOT NULL DEFAULT 'month' CHECK (period IN ('month', 'quarter', 'year')),
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  alert_threshold INTEGER DEFAULT 80 CHECK (alert_threshold >= 0 AND alert_threshold <= 100),
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  
+  -- Constraints
+  CHECK (end_date > start_date),
+  UNIQUE(user_id, category_id, period, start_date) -- 1 category chỉ 1 budget trong 1 period
+);
+
+-- RLS Policies
+ALTER TABLE public.budgets ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own budgets"
+  ON public.budgets FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can create own budgets"
+  ON public.budgets FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own budgets"
+  ON public.budgets FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own budgets"
+  ON public.budgets FOR DELETE
+  USING (auth.uid() = user_id);
+
+-- Indexes
+CREATE INDEX budgets_user_id_idx ON public.budgets(user_id);
+CREATE INDEX budgets_category_id_idx ON public.budgets(category_id);
+CREATE INDEX budgets_dates_idx ON public.budgets(start_date, end_date);
+
+-- Trigger for updated_at
+CREATE TRIGGER update_budgets_updated_at
+  BEFORE UPDATE ON public.budgets
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+```
+
+---
+
+### 5. saving_goals
+*Mục tiêu tiết kiệm*
+
+```sql
+CREATE TABLE public.saving_goals (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  name TEXT NOT NULL CHECK (name != ''),
+  target_amount DECIMAL(15, 2) NOT NULL CHECK (target_amount > 0),
+  start_date DATE NOT NULL,
+  target_date DATE NOT NULL CHECK (target_date > start_date),
+  icon TEXT DEFAULT '🎯',
+  color TEXT DEFAULT '#10B981',
+  note TEXT,
+  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'completed', 'archived')),
+  created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+-- RLS Policies
+ALTER TABLE public.saving_goals ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own goals"
+  ON public.saving_goals FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can create own goals"
+  ON public.saving_goals FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own goals"
+  ON public.saving_goals FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own goals"
+  ON public.saving_goals FOR DELETE
+  USING (auth.uid() = user_id);
+
+-- Indexes
+CREATE INDEX saving_goals_user_id_idx ON public.saving_goals(user_id);
+CREATE INDEX saving_goals_status_idx ON public.saving_goals(status);
+CREATE INDEX saving_goals_dates_idx ON public.saving_goals(start_date, target_date);
+
+-- Trigger for updated_at
+CREATE TRIGGER update_saving_goals_updated_at
+  BEFORE UPDATE ON public.saving_goals
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+```
+
+---
+
+### 6. Database Views & Functions
+
+#### View: Current Balance
+```sql
+CREATE OR REPLACE VIEW public.user_balance AS
+SELECT 
+  user_id,
+  COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE -amount END), 0) as current_balance,
+  COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as total_income,
+  COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as total_expense
+FROM public.transactions
+GROUP BY user_id;
+```
+
+#### Function: Get Goal Progress
+```sql
+CREATE OR REPLACE FUNCTION public.get_goal_progress(goal_id UUID)
+RETURNS TABLE (
+  goal_id UUID,
+  goal_name TEXT,
+  target_amount DECIMAL,
+  current_amount DECIMAL,
+  progress_percent DECIMAL
+) AS $
+BEGIN
+  RETURN QUERY
+  SELECT 
+    sg.id as goal_id,
+    sg.name as goal_name,
+    sg.target_amount,
+    COALESCE(
+      (SELECT SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE -t.amount END)
+       FROM public.transactions t
+       WHERE t.user_id = sg.user_id 
+       AND t.date >= sg.start_date 
+       AND t.date <= CURRENT_DATE), 
+      0
+    ) as current_amount,
+    ROUND(
+      (COALESCE(
+        (SELECT SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE -t.amount END)
+         FROM public.transactions t
+         WHERE t.user_id = sg.user_id 
+         AND t.date >= sg.start_date 
+         AND t.date <= CURRENT_DATE), 
+        0
+      ) / sg.target_amount) * 100, 
+      2
+    ) as progress_percent
+  FROM public.saving_goals sg
+  WHERE sg.id = goal_id;
+END;
+$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+#### Function: Get Budget Spending
+```sql
+CREATE OR REPLACE FUNCTION public.get_budget_spending(budget_id UUID)
+RETURNS TABLE (
+  budget_id UUID,
+  budget_amount DECIMAL,
+  spent_amount DECIMAL,
+  remaining_amount DECIMAL,
+  usage_percent DECIMAL
+) AS $
+BEGIN
+  RETURN QUERY
+  SELECT 
+    b.id as budget_id,
+    b.amount as budget_amount,
+    COALESCE(
+      (SELECT SUM(t.amount)
+       FROM public.transactions t
+       WHERE t.user_id = b.user_id 
+       AND t.category_id = b.category_id
+       AND t.type = 'expense'
+       AND t.date >= b.start_date 
+       AND t.date <= b.end_date), 
+      0
+    ) as spent_amount,
+    b.amount - COALESCE(
+      (SELECT SUM(t.amount)
+       FROM public.transactions t
+       WHERE t.user_id = b.user_id 
+       AND t.category_id = b.category_id
+       AND t.type = 'expense'
+       AND t.date >= b.start_date 
+       AND t.date <= b.end_date), 
+      0
+    ) as remaining_amount,
+    ROUND(
+      (COALESCE(
+        (SELECT SUM(t.amount)
+         FROM public.transactions t
+         WHERE t.user_id = b.user_id 
+         AND t.category_id = b.category_id
+         AND t.type = 'expense'
+         AND t.date >= b.start_date 
+         AND t.date <= b.end_date), 
+        0
+      ) / b.amount) * 100, 
+      2
+    ) as usage_percent
+  FROM public.budgets b
+  WHERE b.id = budget_id;
+END;
+$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+---
+
+### 7. Default Categories Seed Data
+
+```sql
+-- Insert default income categories (user_id = NULL means available for all)
+INSERT INTO public.categories (user_id, name, type, icon, color, is_default) VALUES
+(NULL, 'Lương', 'income', '💰', '#10B981', true),
+(NULL, 'Thưởng', 'income', '🎁', '#059669', true),
+(NULL, 'Đầu tư', 'income', '📈', '#34D399', true),
+(NULL, 'Công việc thêm', 'income', '💼', '#6EE7B7', true),
+(NULL, 'Thu nhập khác', 'income', '🎯', '#A7F3D0', true);
+
+-- Insert default expense categories
+INSERT INTO public.categories (user_id, name, type, icon, color, is_default) VALUES
+(NULL, 'Ăn uống', 'expense', '🍔', '#EF4444', true),
+(NULL, 'Đi lại', 'expense', '🚗', '#F97316', true),
+(NULL, 'Mua sắm', 'expense', '🛒', '#F59E0B', true),
+(NULL, 'Giải trí', 'expense', '🎮', '#EC4899', true),
+(NULL, 'Sức khỏe', 'expense', '💊', '#DC2626', true),
+(NULL, 'Nhà cửa', 'expense', '🏠', '#7C3AED', true),
+(NULL, 'Giáo dục', 'expense', '📚', '#2563EB', true),
+(NULL, 'Gia đình', 'expense', '👨‍👩‍👧', '#8B5CF6', true),
+(NULL, 'Hóa đơn & Dịch vụ', 'expense', '📱', '#0EA5E9', true),
+(NULL, 'Chăm sóc cá nhân', 'expense', '💇', '#06B6D4', true),
+(NULL, 'Quà tặng', 'expense', '🎁', '#14B8A6', true),
+(NULL, 'Chi phí khác', 'expense', '📦', '#64748B', true);
+```
+
+---
+
+### 8. Storage Buckets (Supabase Storage)
+
+```sql
+-- Create bucket for user avatars
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('avatars', 'avatars', true);
+
+-- RLS Policy for avatars bucket
+CREATE POLICY "Users can upload own avatar"
+  ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'avatars' 
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+CREATE POLICY "Users can update own avatar"
+  ON storage.objects FOR UPDATE
+  USING (
+    bucket_id = 'avatars' 
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+CREATE POLICY "Avatars are publicly accessible"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'avatars');
+
+-- Create bucket for backups (private)
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('backups', 'backups', false);
+
+CREATE POLICY "Users can manage own backups"
+  ON storage.objects FOR ALL
+  USING (
+    bucket_id = 'backups' 
+    AND auth.uid()::text = (storage.foldername(name))[1]
+  );
+```
+
+---
+
+### 9. Migration Script (Complete Setup)
+
+Để setup toàn bộ database, chạy file SQL này trong Supabase SQL Editor:
+
+```sql
+-- File: 001_initial_schema.sql
+
+-- 1. Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- 2. Create update_updated_at function
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$ LANGUAGE plpgsql;
+
+-- 3. Create profiles table
+-- [Copy profiles table creation from above]
+
+-- 4. Create categories table
+-- [Copy categories table creation from above]
+
+-- 5. Create transactions table
+-- [Copy transactions table creation from above]
+
+-- 6. Create budgets table
+-- [Copy budgets table creation from above]
+
+-- 7. Create saving_goals table
+-- [Copy saving_goals table creation from above]
+
+-- 8. Create views
+-- [Copy views from above]
+
+-- 9. Create functions
+-- [Copy functions from above]
+
+-- 10. Seed default categories
+-- [Copy seed data from above]
+
+-- 11. Setup storage
+-- [Copy storage setup from above]
+```
+
+---
+
+## 10. SUPABASE CLIENT USAGE (Sample Code)
+
+### Setup Supabase Client
+
+```javascript
+// lib/supabase.js
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+```
+
+---
+
+### Authentication
+
+#### Sign Up
+```javascript
+const { data, error } = await supabase.auth.signUp({
+  email: 'user@example.com',
+  password: 'password123',
+  options: {
+    data: {
+      name: 'John Doe'
+    }
+  }
+});
+```
+
+#### Sign In
+```javascript
+const { data, error } = await supabase.auth.signInWithPassword({
+  email: 'user@example.com',
+  password: 'password123'
+});
+```
+
+#### Sign In with Google
+```javascript
+const { data, error } = await supabase.auth.signInWithOAuth({
+  provider: 'google'
+});
+```
+
+#### Sign Out
+```javascript
+const { error } = await supabase.auth.signOut();
+```
+
+#### Get Current User
+```javascript
+const { data: { user } } = await supabase.auth.getUser();
+```
+
+#### Reset Password
+```javascript
+// Send reset email
+const { data, error } = await supabase.auth.resetPasswordForEmail(
+  'user@example.com',
+  { redirectTo: 'myapp://reset-password' }
+);
+
+// Update password
+const { data, error } = await supabase.auth.updateUser({
+  password: 'new_password'
+});
+```
+
+---
+
+### Profile Operations
+
+#### Get Profile
+```javascript
+const { data: profile, error } = await supabase
+  .from('profiles')
+  .select('*')
+  .eq('id', user.id)
+  .single();
+```
+
+#### Update Profile
+```javascript
+const { data, error } = await supabase
+  .from('profiles')
+  .update({ 
+    name: 'New Name',
+    currency: 'USD',
+    theme: 'dark'
+  })
+  .eq('id', user.id);
+```
+
+#### Upload Avatar
+```javascript
+const file = event.target.files[0];
+const fileExt = file.name.split('.').pop();
+const fileName = `${user.id}/avatar.${fileExt}`;
+
+// Upload to storage
+const { data: uploadData, error: uploadError } = await supabase.storage
+  .from('avatars')
+  .upload(fileName, file, { upsert: true });
+
+// Get public URL
+const { data: { publicUrl } } = supabase.storage
+  .from('avatars')
+  .getPublicUrl(fileName);
+
+// Update profile
+const { error: updateError } = await supabase
+  .from('profiles')
+  .update({ avatar_url: publicUrl })
+  .eq('id', user.id);
+```
+
+---
+
+### Transaction Operations
+
+#### Create Transaction
+```javascript
+const { data, error } = await supabase
+  .from('transactions')
+  .insert({
+    user_id: user.id,
+    type: 'expense',
+    amount: 50000,
+    category_id: categoryId,
+    note: 'Lunch at restaurant',
+    date: '2025-10-08'
+  })
+  .select()
+  .single();
+```
+
+#### Get Transactions (with pagination & filters)
+```javascript
+const { data: transactions, error } = await supabase
+  .from('transactions')
+  .select(`
+    *,
+    categories (
+      id,
+      name,
+      icon,
+      color
+    )
+  `)
+  .eq('user_id', user.id)
+  .gte('date', startDate)
+  .lte('date', endDate)
+  .order('date', { ascending: false })
+  .range(0, 49); // Pagination: first 50 items
+```
+
+#### Update Transaction
+```javascript
+const { data, error } = await supabase
+  .from('transactions')
+  .update({ 
+    amount: 75000,
+    note: 'Updated note'
+  })
+  .eq('id', transactionId)
+  .eq('user_id', user.id); // Security: ensure user owns the transaction
+```
+
+#### Delete Transaction
+```javascript
+const { error } = await supabase
+  .from('transactions')
+  .delete()
+  .eq('id', transactionId)
+  .eq('user_id', user.id);
+```
+
+#### Search Transactions
+```javascript
+const { data, error } = await supabase
+  .from('transactions')
+  .select('*, categories(*)')
+  .eq('user_id', user.id)
+  .ilike('note', `%${searchQuery}%`)
+  .order('date', { ascending: false });
+```
+
+---
+
+### Category Operations
+
+#### Get All Categories (including defaults)
+```javascript
+const { data: categories, error } = await supabase
+  .from('categories')
+  .select('*')
+  .or(`user_id.eq.${user.id},user_id.is.null`) // User's + default categories
+  .eq('type', 'expense')
+  .order('is_default', { ascending: false }); // Default first
+```
+
+#### Create Custom Category
+```javascript
+const { data, error } = await supabase
+  .from('categories')
+  .insert({
+    user_id: user.id,
+    name: 'Coffee',
+    type: 'expense',
+    icon: '☕',
+    color: '#8B4513'
+  })
+  .select()
+  .single();
+```
+
+#### Update Category
+```javascript
+const { data, error } = await supabase
+  .from('categories')
+  .update({ 
+    name: 'Updated Name',
+    icon: '🎯'
+  })
+  .eq('id', categoryId)
+  .eq('user_id', user.id);
+```
+
+#### Delete Category
+```javascript
+// Note: Will fail if transactions reference this category (due to RESTRICT)
+const { error } = await supabase
+  .from('categories')
+  .delete()
+  .eq('id', categoryId)
+  .eq('user_id', user.id);
+```
+
+---
+
+### Budget Operations
+
+#### Create Budget
+```javascript
+const { data, error } = await supabase
+  .from('budgets')
+  .insert({
+    user_id: user.id,
+    category_id: categoryId,
+    amount: 1000000,
+    period: 'month',
+    start_date: '2025-10-01',
+    end_date: '2025-10-31',
+    alert_threshold: 80
+  })
+  .select()
+  .single();
+```
+
+#### Get All Budgets with Spending
+```javascript
+const { data: budgets, error } = await supabase
+  .rpc('get_budget_spending', { budget_id: budgetId });
+
+// Or get all budgets and calculate spending in app
+const { data: budgets, error } = await supabase
+  .from('budgets')
+  .select(`
+    *,
+    categories (
+      id,
+      name,
+      icon,
+      color
+    )
+  `)
+  .eq('user_id', user.id)
+  .gte('end_date', new Date().toISOString().split('T')[0]);
+```
+
+#### Update Budget
+```javascript
+const { data, error } = await supabase
+  .from('budgets')
+  .update({ 
+    amount: 1500000,
+    alert_threshold: 90
+  })
+  .eq('id', budgetId)
+  .eq('user_id', user.id);
+```
+
+---
+
+### Saving Goals Operations
+
+#### Create Saving Goal
+```javascript
+const { data, error } = await supabase
+  .from('saving_goals')
+  .insert({
+    user_id: user.id,
+    name: 'Mua Macbook',
+    target_amount: 30000000,
+    start_date: '2025-01-01',
+    target_date: '2025-06-01',
+    icon: '💻',
+    color: '#3B82F6',
+    note: 'Macbook Pro M3'
+  })
+  .select()
+  .single();
+```
+
+#### Get All Goals with Progress
+```javascript
+// Using RPC function
+const { data: goals, error } = await supabase
+  .rpc('get_goal_progress', { goal_id: goalId });
+
+// Or calculate in app
+const { data: goals, error } = await supabase
+  .from('saving_goals')
+  .select('*')
+  .eq('user_id', user.id)
+  .order('target_date', { ascending: true });
+
+// Then for each goal, calculate progress:
+for (const goal of goals) {
+  const { data: transactions } = await supabase
+    .from('transactions')
+    .select('type, amount')
+    .eq('user_id', user.id)
+    .gte('date', goal.start_date)
+    .lte('date', new Date().toISOString().split('T')[0]);
+  
+  const currentAmount = transactions.reduce((sum, t) => 
+    sum + (t.type === 'income' ? t.amount : -t.amount), 0
+  );
+  
+  goal.current_amount = currentAmount;
+  goal.progress = (currentAmount / goal.target_amount) * 100;
+}
+```
+
+---
+
+### Analysis & Reports
+
+#### Get Net Balance
+```javascript
+const { data, error } = await supabase
+  .from('user_balance')
+  .select('*')
+  .eq('user_id', user.id)
+  .single();
+```
+
+#### Get Monthly Income vs Expense
+```javascript
+const { data: transactions, error } = await supabase
+  .from('transactions')
+  .select('type, amount, date')
+  .eq('user_id', user.id)
+  .gte('date', '2025-10-01')
+  .lte('date', '2025-10-31');
+
+// Process in app
+const income = transactions
+  .filter(t => t.type === 'income')
+  .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+
+const expense = transactions
+  .filter(t => t.type === 'expense')
+  .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+```
+
+#### Get Expenses by Category
+```javascript
+const { data: expenses, error } = await supabase
+  .from('transactions')
+  .select(`
+    amount,
+    categories (
+      id,
+      name,
+      icon,
+      color
+    )
+  `)
+  .eq('user_id', user.id)
+  .eq('type', 'expense')
+  .gte('date', startDate)
+  .lte('date', endDate);
+
+// Group by category in app
+const byCategory = expenses.reduce((acc, t) => {
+  const categoryId = t.categories.id;
+  if (!acc[categoryId]) {
+    acc[categoryId] = {
+      category: t.categories,
+      total: 0,
+      count: 0
+    };
+  }
+  acc[categoryId].total += parseFloat(t.amount);
+  acc[categoryId].count += 1;
+  return acc;
+}, {});
+```
+
+---
+
+### Real-time Subscriptions (Optional)
+
+#### Subscribe to Transaction Changes
+```javascript
+const transactionSubscription = supabase
+  .channel('transactions')
+  .on(
+    'postgres_changes',
+    {
+      event: '*', // INSERT, UPDATE, DELETE
+      schema: 'public',
+      table: 'transactions',
+      filter: `user_id=eq.${user.id}`
+    },
+    (payload) => {
+      console.log('Transaction changed:', payload);
+      // Update UI accordingly
+    }
+  )
+  .subscribe();
+
+// Cleanup
+transactionSubscription.unsubscribe();
+```
+
+---
+
+## 11. TIÊU CHÍ CHẤP NHẬN TỔNG THỂ
+
+### MVP Acceptance Criteria
+
+**Functional:**
+- [ ] Người dùng có thể đăng ký và đăng nhập qua Supabase Auth
+- [ ] Người dùng xem được Onboarding và hoàn thành Initial Setup
+- [ ] Profile tự động được tạo khi đăng ký (via trigger)
+- [ ] Người dùng có thể thêm giao dịch thu/chi với category
+- [ ] Số dư Net Balance được tính chính xác từ transactions
+- [ ] Người dùng có thể tạo category tùy chỉnh (default categories luôn có sẵn)
+- [ ] Người dùng có thể tạo budget cho category chi tiêu
+- [ ] Người dùng nhận được cảnh báo khi gần đạt/vượt budget
+- [ ] Người dùng có thể tạo Saving Goal và xem tiến độ (tính từ Net Balance)
+- [ ] Analysis screen hiển thị biểu đồ thu chi và theo category
+- [ ] Người dùng có thể sửa/xóa giao dịch, category, budget, goals
+- [ ] Profile screen cho phép cài đặt cơ bản và đổi avatar
+- [ ] Row Level Security (RLS) hoạt động đúng - user chỉ xem được data của mình
+- [ ] Upload avatar lên Supabase Storage thành công
+
+**Non-Functional:**
+- [ ] App load time < 2s
+- [ ] Supabase queries response time < 500ms
+- [ ] Không crash, không bug nghiêm trọng
+- [ ] UI/UX mượt mà, đẹp mắt
+- [ ] Responsive trên nhiều kích thước màn hình
+- [ ] Data được bảo mật với RLS policies
+- [ ] Authentication tokens được quản lý an toàn
+- [ ] Hoạt động offline với local cache (sử dụng React Query)
+- [ ] Sync tự động khi có internet
+
+**Supabase-specific:**
+- [ ] Database schema deployed thành công
+- [ ] RLS policies test pass cho tất cả tables
+- [ ] Default categories đã được seed
+- [ ] Triggers và Functions hoạt động chính xác
+- [ ] Storage buckets được config đúng permissions
+- [ ] Supabase realtime subscriptions hoạt động (nếu implement)
+
+---
+
+## 12. RỦIS RO & GIẢI PHÁP
+
+### Rủi ro 1: Người dùng nhập sai số liệu
+**Giải pháp:**
+- Cho phép sửa/xóa giao dịch dễ dàng
+- Hiển thị xác nhận trước khi lưu số tiền lớn
+- Tính năng Undo (optional)
+
+### Rủi ro 2: Mất dữ liệu
+**Giải pháp:**
+- Auto backup định kỳ
+- Backup lên cloud
+- Khuyến khích người dùng backup thủ công
+
+### Rủi ro 3: Performance khi có nhiều giao dịch
+**Giải pháp:**
+- Pagination cho danh sách giao dịch
+- Lazy loading cho biểu đồ
+- Database indexing
+- Caching
+
+### Rủi ro 4: Người dùng không hiểu cách dùng
+**Giải pháp:**
+- Onboarding chi tiết
+- Tooltips và hints
+- FAQ trong app
+- Video hướng dẫn
+
+---
+
+## 14. SUPABASE MONITORING & OBSERVABILITY
+
+### Built-in Supabase Tools
+
+**1. Dashboard Analytics:**
+- API usage và performance
+- Database connections
+- Storage usage
+- Auth activity (signups, logins)
+- Query performance
+
+**2. Database Monitoring:**
+```sql
+-- Check slow queries
+SELECT * FROM pg_stat_statements 
+ORDER BY total_exec_time DESC 
+LIMIT 10;
+
+-- Check table sizes
+SELECT 
+  schemaname,
+  tablename,
+  pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS size
+FROM pg_tables
+WHERE schemaname = 'public'
+ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
+
+-- Check RLS policy usage
+SELECT * FROM pg_policies WHERE schemaname = 'public';
+```
+
+**3. Logging:**
+- Real-time logs trong Supabase Dashboard
+- Filter by level (info, warn, error)
+- Search by message
+
+**4. Alerts:**
+- Setup alerts cho:
+  - High error rates
+  - Slow queries
+  - High database CPU
+  - Storage limit reached
+  - Unusual auth activity
+
+### External Monitoring
+
+**Sentry Integration:**
+```javascript
+import * as Sentry from "@sentry/react-native";
+
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  environment: process.env.NODE_ENV,
+  integrations: [
+    new Sentry.Integrations.ReactNativeTracing({
+      tracingOrigins: ["localhost", /^\//],
+    }),
+  ],
+  tracesSampleRate: 1.0,
+});
+
+// Capture Supabase errors
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+    Sentry.setUser(null);
+  } else if (event === 'SIGNED_IN' && session) {
+    Sentry.setUser({ id: session.user.id, email: session.user.email });
+  }
+});
+```
+
+---
+
+**Phiên bản:** 2.0  
+**Ngày cập nhật:** 08/10/2025  
+**Người tạo:** Product Owner  
+**Trạng thái:** Ready for Development
