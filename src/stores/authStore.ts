@@ -11,6 +11,7 @@ interface AuthState {
   setUser: (user: User | null) => void;
   setLoading: (isLoading: boolean) => void;
   setOnboardingCompleted: (completed: boolean) => Promise<void>;
+  refreshUserData: () => Promise<void>;
   signOut: () => Promise<void>;
   initialize: () => Promise<void>;
   checkOnboardingStatus: (userId: string) => Promise<boolean>;
@@ -44,6 +45,35 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ hasCompletedOnboarding: completed });
     } catch (error) {
       console.error('Error setting onboarding completed:', error);
+    }
+  },
+
+  refreshUserData: async () => {
+    try {
+      const { user } = get();
+      if (!user) return;
+
+      // Fetch latest user profile from database
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error refreshing user data:', error);
+        return;
+      }
+
+      if (profile) {
+        // Update user data and onboarding status
+        set({
+          user: profile as User,
+          hasCompletedOnboarding: profile.has_completed_onboarding || false,
+        });
+      }
+    } catch (error) {
+      console.error('Error refreshing user data:', error);
     }
   },
 

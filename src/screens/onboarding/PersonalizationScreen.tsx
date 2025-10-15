@@ -167,6 +167,10 @@ const PersonalizationScreen: React.FC = () => {
 
       if (error) throw error;
 
+      // Refresh user data in authStore to sync state with database
+      // This will trigger RootNavigator to automatically switch to Main app
+      await useAuthStore.getState().refreshUserData();
+
       setCurrentStep('complete');
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to save personalization. Please try again.');
@@ -195,6 +199,10 @@ const PersonalizationScreen: React.FC = () => {
                   has_completed_onboarding: true,
                 })
                 .eq('id', user.id);
+
+              // Refresh user data to trigger navigation to Main app
+              await useAuthStore.getState().refreshUserData();
+
               setCurrentStep('complete');
             } catch (error) {
               console.error('Error skipping personalization:', error);
@@ -593,7 +601,7 @@ const PersonalizationScreen: React.FC = () => {
     );
   }
 
-  // Complete Step
+  // Complete Step - Show success message and let RootNavigator handle navigation
   if (currentStep === 'complete') {
     return (
       <View style={styles.container}>
@@ -603,18 +611,8 @@ const PersonalizationScreen: React.FC = () => {
           <Text style={styles.completeDescription}>
             Your AI assistant is now personalized and ready to help you manage your finances.
           </Text>
-          <TouchableOpacity
-            style={styles.doneButton}
-            onPress={() => {
-              // Navigate to home (will be handled by onboarding flow)
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'Onboarding' as never }],
-              });
-            }}
-          >
-            <Text style={styles.doneButtonText}>Get Started</Text>
-          </TouchableOpacity>
+          <ActivityIndicator size="large" color="#3B82F6" style={{ marginTop: 20 }} />
+          <Text style={styles.loadingText}>Taking you to the app...</Text>
         </View>
       </View>
     );
@@ -858,6 +856,12 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
   },
 });
 
