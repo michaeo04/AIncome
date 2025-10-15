@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { useChatStore } from '../../stores/chatStore';
 import { useAuthStore } from '../../stores/authStore';
-import { Category } from '../../types';
+import { Category, UserPersonalization } from '../../types';
 import { classifyIntent } from '../../utils/intentClassifier';
 import { parseTransactionWithAI, parseTransactionFallback, chatWithGemini } from '../../services/aiService';
 import TransactionConfirmationCard from './TransactionConfirmationCard';
@@ -40,13 +40,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
   const [inputText, setInputText] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
   const [currency, setCurrency] = useState('VND');
+  const [userPersonalization, setUserPersonalization] = useState<UserPersonalization | undefined>(undefined);
   const [isSaving, setIsSaving] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  // Fetch categories and currency on mount
+  // Fetch categories, currency, and personalization on mount
   useEffect(() => {
     fetchCategories();
     fetchCurrency();
+    fetchUserPersonalization();
   }, []);
 
   // Auto-scroll to bottom when messages change
@@ -90,6 +92,36 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
     }
   };
 
+  const fetchUserPersonalization = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('financial_goals, financial_knowledge, communication_style, age_range, financial_concerns, income_level, family_situation, has_completed_personalization')
+        .eq('id', user.id)
+        .single();
+
+      if (error) throw error;
+
+      if (data && data.has_completed_personalization) {
+        // Only use personalization if user has completed it
+        setUserPersonalization({
+          financial_goals: data.financial_goals || [],
+          financial_knowledge: data.financial_knowledge,
+          communication_style: data.communication_style,
+          age_range: data.age_range,
+          financial_concerns: data.financial_concerns || [],
+          income_level: data.income_level,
+          family_situation: data.family_situation,
+          has_completed_personalization: data.has_completed_personalization,
+        });
+      }
+    } catch (error: any) {
+      console.error('Error fetching user personalization:', error);
+    }
+  };
+
   const handleSend = async () => {
     if (!inputText.trim() || isProcessing) return;
 
@@ -107,8 +139,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
       const intentResult = classifyIntent(message);
 
       if (intentResult.intent === 'small_talk') {
-        // Handle casual conversation with Gemini AI
-        const chatResult = await chatWithGemini(message, messages);
+        // Handle casual conversation with Gemini AI (with personalization)
+        const chatResult = await chatWithGemini(message, messages, userPersonalization);
 
         if (chatResult.success && chatResult.reply) {
           addAssistantMessage(chatResult.reply);
@@ -156,8 +188,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
         return;
       }
 
-      // Unknown intent - treat as general conversation
-      const chatResult = await chatWithGemini(message, messages);
+      // Unknown intent - treat as general conversation (with personalization)
+      const chatResult = await chatWithGemini(message, messages, userPersonalization);
 
       if (chatResult.success && chatResult.reply) {
         addAssistantMessage(chatResult.reply);
