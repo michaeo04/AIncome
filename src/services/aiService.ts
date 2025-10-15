@@ -1,7 +1,7 @@
 // AI Service - Handles communication with Supabase Edge Functions for AI parsing and chat
 
 import { supabase } from './supabase';
-import { ParsedTransaction, Category, ChatMessage } from '../types';
+import { ParsedTransaction, Category, ChatMessage, UserPersonalization } from '../types';
 
 export interface ParseTransactionRequest {
   message: string;
@@ -234,10 +234,12 @@ export function parseTransactionFallback(
 /**
  * Chat with Gemini AI for general conversation
  * Provides natural, context-aware responses for non-transaction messages
+ * Includes user personalization data for tailored responses
  */
 export async function chatWithGemini(
   message: string,
-  conversationHistory: ChatMessage[] = []
+  conversationHistory: ChatMessage[] = [],
+  userPersonalization?: UserPersonalization
 ): Promise<ChatWithGeminiResponse> {
   try {
     // Call Supabase Edge Function
@@ -247,7 +249,16 @@ export async function chatWithGemini(
         conversationHistory: conversationHistory.map(msg => ({
           role: msg.role,
           content: msg.content
-        }))
+        })),
+        userPersonalization: userPersonalization ? {
+          financial_goals: userPersonalization.financial_goals,
+          financial_knowledge: userPersonalization.financial_knowledge,
+          communication_style: userPersonalization.communication_style,
+          age_range: userPersonalization.age_range,
+          financial_concerns: userPersonalization.financial_concerns,
+          income_level: userPersonalization.income_level,
+          family_situation: userPersonalization.family_situation,
+        } : undefined
       }
     });
 

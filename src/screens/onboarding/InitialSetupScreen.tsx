@@ -11,14 +11,23 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { OnboardingStackParamList } from '../../navigation/types';
 import { useAuthStore } from '../../stores/authStore';
 import { supabase } from '../../services/supabase';
 import { CURRENCIES } from '../../constants';
 import { Category } from '../../types';
 
-type SetupStep = 'currency' | 'categories' | 'balance' | 'complete';
+type InitialSetupScreenNavigationProp = StackNavigationProp<
+  OnboardingStackParamList,
+  'InitialSetup'
+>;
+
+type SetupStep = 'currency' | 'categories' | 'balance';
 
 const InitialSetupScreen: React.FC = () => {
+  const navigation = useNavigation<InitialSetupScreenNavigationProp>();
   const [currentStep, setCurrentStep] = useState<SetupStep>('currency');
   const [selectedCurrency, setSelectedCurrency] = useState('VND');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -27,7 +36,7 @@ const InitialSetupScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingCategories, setIsFetchingCategories] = useState(false);
 
-  const { user, setOnboardingCompleted } = useAuthStore();
+  const { user } = useAuthStore();
 
   useEffect(() => {
     if (currentStep === 'categories') {
@@ -141,9 +150,8 @@ const InitialSetupScreen: React.FC = () => {
         }
       }
 
-      // Mark onboarding as completed
-      await setOnboardingCompleted(true);
-      setCurrentStep('complete');
+      // Navigate to personalization screen
+      navigation.navigate('Personalization');
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to complete setup. Please try again.');
       console.error('Error completing setup:', error);

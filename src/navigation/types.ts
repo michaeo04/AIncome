@@ -13,6 +13,7 @@ export type RootStackParamList = {
 export type OnboardingStackParamList = {
   Onboarding: undefined;
   InitialSetup: undefined;
+  Personalization: undefined;
 };
 
 // Auth Stack Navigator

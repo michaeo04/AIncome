@@ -1,5 +1,64 @@
 // Core types for the application
 
+// Personalization types
+export type FinancialGoal =
+  | 'save_house'
+  | 'pay_debt'
+  | 'emergency_fund'
+  | 'retirement'
+  | 'investment'
+  | 'travel'
+  | 'education'
+  | 'track_spending';
+
+export type FinancialKnowledge = 'beginner' | 'intermediate' | 'advanced';
+
+export type CommunicationStyle =
+  | 'casual'
+  | 'professional'
+  | 'brief'
+  | 'detailed'
+  | 'encouraging';
+
+export type AgeRange = '18-25' | '26-35' | '36-45' | '46-55' | '56+';
+
+export type FinancialConcern =
+  | 'overspending'
+  | 'not_saving'
+  | 'debt'
+  | 'budgeting'
+  | 'investment'
+  | 'retirement_plan'
+  | 'education_costs'
+  | 'healthcare_costs';
+
+export type IncomeLevel =
+  | 'student'
+  | 'entry'
+  | 'middle'
+  | 'upper_middle'
+  | 'high'
+  | 'prefer_not_say';
+
+export type FamilySituation =
+  | 'single'
+  | 'partnered_no_kids'
+  | 'partnered_with_kids'
+  | 'single_parent'
+  | 'living_with_parents'
+  | 'retired';
+
+export interface UserPersonalization {
+  financial_goals: FinancialGoal[];
+  financial_knowledge?: FinancialKnowledge;
+  communication_style?: CommunicationStyle;
+  age_range?: AgeRange;
+  financial_concerns: FinancialConcern[];
+  income_level?: IncomeLevel;
+  family_situation?: FamilySituation;
+  has_completed_personalization: boolean;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -13,6 +72,15 @@ export interface User {
   month_start: number;
   notifications_enabled: boolean;
   has_completed_onboarding: boolean;
+  // Personalization fields
+  financial_goals?: FinancialGoal[];
+  financial_knowledge?: FinancialKnowledge;
+  communication_style?: CommunicationStyle;
+  age_range?: AgeRange;
+  financial_concerns?: FinancialConcern[];
+  income_level?: IncomeLevel;
+  family_situation?: FamilySituation;
+  has_completed_personalization?: boolean;
   created_at: string;
   updated_at: string;
 }
