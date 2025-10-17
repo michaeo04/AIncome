@@ -170,6 +170,7 @@ export interface ChatMessage {
   timestamp: Date;
   type?: 'text' | 'confirmation';
   parsedTransaction?: ParsedTransaction;
+  parsedTransactions?: ParsedTransaction[]; // Support multiple transactions
 }
 
 export interface ParsedTransaction {

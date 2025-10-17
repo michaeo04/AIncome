@@ -52,11 +52,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   addAssistantMessage: (content, parsedTransaction) => {
+    // Support both single and multiple transactions
+    const parsedTransactions = parsedTransaction
+      ? (Array.isArray(parsedTransaction) ? parsedTransaction : [parsedTransaction])
+      : undefined;
+
     get().addMessage({
       role: 'assistant',
       content,
-      type: parsedTransaction ? 'confirmation' : 'text',
-      parsedTransaction
+      type: parsedTransactions && parsedTransactions.length > 0 ? 'confirmation' : 'text',
+      parsedTransaction: parsedTransactions && parsedTransactions.length === 1 ? parsedTransactions[0] : undefined,
+      parsedTransactions: parsedTransactions && parsedTransactions.length > 1 ? parsedTransactions : undefined
     });
   },
 

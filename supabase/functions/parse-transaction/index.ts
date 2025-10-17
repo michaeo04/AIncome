@@ -53,7 +53,7 @@ serve(async (req) => {
       .map(cat => `- ID: "${cat.id}" | Name: ${cat.name} | Type: ${cat.type === 'income' ? 'Thu' : 'Chi'} | Icon: ${cat.icon}`)
       .join('\n');
 
-    // Create prompt for Gemini
+    // Create prompt for Gemini - now supports multiple transactions
     const prompt = `Bạn là một trợ lý tài chính thông minh. Nhiệm vụ của bạn là phân tích tin nhắn tiếng Việt về giao dịch tài chính và trích xuất thông tin theo định dạng JSON.
 
 Danh sách các hạng mục có sẵn:
@@ -74,17 +74,35 @@ Quy tắc:
 - Nếu không chắc hạng mục → chọn "Khác" với confidence thấp
 - Ghi chú ngắn gọn, không quá 100 ký tự
 
+**HỖ TRỢ NHIỀU GIAO DỊCH:**
+- Nếu tin nhắn có NHIỀU giao dịch (ví dụ: "phở 30k, cafe 50k" hoặc dạng danh sách dòng mới), hãy trả về MẢNG các giao dịch
+- Mỗi giao dịch là một object riêng biệt trong mảng
+- Nếu chỉ có MỘT giao dịch, vẫn trả về mảng với 1 phần tử
+
 Tin nhắn cần phân tích: "${message}"
 
-Trả về CHÍNH XÁC JSON với định dạng (category_id PHẢI là UUID từ cột ID):
+Trả về CHÍNH XÁC JSON với định dạng MẢNG (category_id PHẢI là UUID từ cột ID):
 {
-  "type": "expense",
-  "amount": 50000,
-  "category_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-  "category_name": "Ăn uống",
-  "note": "Ăn phở",
-  "date": "2025-01-13",
-  "confidence": 0.95
+  "transactions": [
+    {
+      "type": "expense",
+      "amount": 30000,
+      "category_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+      "category_name": "Ăn uống",
+      "note": "Ăn phở",
+      "date": "2025-01-13",
+      "confidence": 0.95
+    },
+    {
+      "type": "expense",
+      "amount": 50000,
+      "category_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+      "category_name": "Ăn uống",
+      "note": "Cà phê",
+      "date": "2025-01-13",
+      "confidence": 0.95
+    }
+  ]
 }`;
 
     // Call Google Gemini API
@@ -122,9 +140,9 @@ Trả về CHÍNH XÁC JSON với định dạng (category_id PHẢI là UUID t�
     const aiResponse = geminiData.candidates[0].content.parts[0].text;
 
     // Parse AI response
-    let parsedTransaction;
+    let parsedData;
     try {
-      parsedTransaction = JSON.parse(aiResponse);
+      parsedData = JSON.parse(aiResponse);
     } catch (e) {
       console.error('Failed to parse AI response:', e);
       return new Response(
@@ -133,22 +151,39 @@ Trả về CHÍNH XÁC JSON với định dạng (category_id PHẢI là UUID t�
       );
     }
 
-    // Validate category_id exists
-    const categoryExists = categories.some(cat => cat.id === parsedTransaction.category_id);
-    if (!categoryExists) {
-      // Find "Khác" category as fallback
-      const otherCategory = categories.find(cat => cat.name === 'Khác');
-      if (otherCategory) {
-        parsedTransaction.category_id = otherCategory.id;
-        parsedTransaction.category_name = 'Khác';
-        parsedTransaction.confidence = Math.min(parsedTransaction.confidence, 0.6);
-      }
+    // Handle both array format and old single transaction format for backward compatibility
+    let transactions = [];
+    if (parsedData.transactions && Array.isArray(parsedData.transactions)) {
+      transactions = parsedData.transactions;
+    } else if (parsedData.type && parsedData.amount) {
+      // Old format - single transaction
+      transactions = [parsedData];
+    } else {
+      return new Response(
+        JSON.stringify({ success: false, error: 'No transactions found in response' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
+
+    // Validate and fix category_id for each transaction
+    transactions = transactions.map(transaction => {
+      const categoryExists = categories.some(cat => cat.id === transaction.category_id);
+      if (!categoryExists) {
+        // Find "Khác" category as fallback
+        const otherCategory = categories.find(cat => cat.name === 'Khác');
+        if (otherCategory) {
+          transaction.category_id = otherCategory.id;
+          transaction.category_name = 'Khác';
+          transaction.confidence = Math.min(transaction.confidence, 0.6);
+        }
+      }
+      return transaction;
+    });
 
     return new Response(
       JSON.stringify({
         success: true,
-        transaction: parsedTransaction
+        transactions: transactions
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

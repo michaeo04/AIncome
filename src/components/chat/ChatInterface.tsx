@@ -156,31 +156,39 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
       }
 
       if (intentResult.intent === 'create_transaction') {
-        // Parse transaction
+        // Parse transaction(s)
         addAssistantMessage('Đang phân tích...');
 
         // Try AI parsing first
         const aiResult = await parseTransactionWithAI(message, user!.id, categories);
 
-        let parsedTransaction;
+        let parsedTransactions: any = null;
 
-        if (aiResult.success && aiResult.transaction) {
-          parsedTransaction = aiResult.transaction;
+        if (aiResult.success && aiResult.transactions) {
+          parsedTransactions = aiResult.transactions;
+        } else if (aiResult.success && aiResult.transaction) {
+          // Single transaction from AI
+          parsedTransactions = aiResult.transaction;
         } else {
           // Fallback to rule-based parser
           console.log('AI parsing failed, using fallback');
-          parsedTransaction = parseTransactionFallback(message, categories);
+          parsedTransactions = parseTransactionFallback(message, categories);
         }
 
-        if (parsedTransaction) {
-          // Show confirmation card
-          addAssistantMessage(
-            'Mình đã hiểu! Hãy kiểm tra thông tin và xác nhận nhé:',
-            parsedTransaction
-          );
+        if (parsedTransactions) {
+          // Check if multiple or single
+          const isMultiple = Array.isArray(parsedTransactions);
+          const count = isMultiple ? parsedTransactions.length : 1;
+
+          // Show confirmation card(s)
+          const confirmMessage = isMultiple
+            ? `Mình đã hiểu ${count} giao dịch! Hãy kiểm tra thông tin và xác nhận nhé:`
+            : 'Mình đã hiểu! Hãy kiểm tra thông tin và xác nhận nhé:';
+
+          addAssistantMessage(confirmMessage, parsedTransactions);
         } else {
           addAssistantMessage(
-            'Xin lỗi, mình không thể hiểu thông tin giao dịch. Bạn có thể thử lại với các thông tin rõ ràng hơn như: "Ăn phở 50k" hoặc "Nhận lương 15 triệu"?'
+            'Xin lỗi, mình không thể hiểu thông tin giao dịch. Bạn có thể thử lại với các thông tin rõ ràng hơn như: "Ăn phở 50k" hoặc "Nhận lương 15 triệu"?\n\nĐể nhập nhiều giao dịch, bạn có thể viết:\n- Ăn phở 30k, cafe 50k\n- Hoặc mỗi giao dịch một dòng'
           );
         }
 
@@ -279,9 +287,141 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
     );
   };
 
+  const handleConfirmSingleTransaction = async (transactionData: any, messageId: string, index: number) => {
+    if (!user) return;
+
+    // Validate category_id before saving
+    if (!transactionData.category_id || transactionData.category_id === '') {
+      addAssistantMessage(
+        `❌ Lỗi giao dịch #${index + 1}: Không tìm thấy hạng mục phù hợp. Vui lòng thử lại.`
+      );
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .insert([{
+          user_id: user.id,
+          type: transactionData.type,
+          amount: transactionData.amount,
+          category_id: transactionData.category_id,
+          note: transactionData.note,
+          date: transactionData.date,
+        }]);
+
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
+
+      addAssistantMessage(`✅ Đã lưu giao dịch #${index + 1} thành công!`);
+      setIsSaving(false);
+
+      // Notify parent to refresh
+      setTimeout(() => {
+        onTransactionSaved();
+      }, 500);
+
+    } catch (error: any) {
+      console.error('Error saving transaction:', error);
+      addAssistantMessage(`❌ Không thể lưu giao dịch #${index + 1}. Vui lòng thử lại.`);
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancelSingleTransaction = (messageId: string, index: number) => {
+    addAssistantMessage(
+      `Đã hủy giao dịch #${index + 1}. Các giao dịch khác vẫn có thể được lưu! 😊`
+    );
+  };
+
+  const handleConfirmAllTransactions = async (transactions: any[]) => {
+    if (!user) return;
+
+    // Validate all transactions
+    const invalidTransactions = transactions.filter(t => !t.category_id || t.category_id === '');
+    if (invalidTransactions.length > 0) {
+      addAssistantMessage(
+        `❌ Có ${invalidTransactions.length} giao dịch thiếu hạng mục. Vui lòng kiểm tra lại.`
+      );
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      const transactionsToInsert = transactions.map(t => ({
+        user_id: user.id,
+        type: t.type,
+        amount: t.amount,
+        category_id: t.category_id,
+        note: t.note,
+        date: t.date,
+      }));
+
+      const { error } = await supabase
+        .from('transactions')
+        .insert(transactionsToInsert);
+
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
+
+      addAssistantMessage(`✅ Đã lưu ${transactions.length} giao dịch thành công!`);
+      setIsSaving(false);
+
+      // Notify parent to refresh
+      setTimeout(() => {
+        onTransactionSaved();
+      }, 1000);
+
+    } catch (error: any) {
+      console.error('Error saving transactions:', error);
+      addAssistantMessage(`❌ Không thể lưu các giao dịch. Vui lòng thử lại.`);
+      setIsSaving(false);
+    }
+  };
+
   const renderMessage = (message: any) => {
     const isUser = message.role === 'user';
 
+    // Handle multiple transactions
+    if (message.type === 'confirmation' && message.parsedTransactions && Array.isArray(message.parsedTransactions)) {
+      return (
+        <View key={message.id} style={styles.messageWrapper}>
+          <View style={[styles.messageBubble, styles.assistantBubble]}>
+            <Text style={styles.assistantText}>{message.content}</Text>
+          </View>
+          {message.parsedTransactions.map((transaction: any, index: number) => (
+            <TransactionConfirmationCard
+              key={`${message.id}-transaction-${index}`}
+              transaction={transaction}
+              currency={currency}
+              onEdit={handleEditTransaction}
+              onCancel={() => handleCancelSingleTransaction(message.id, index)}
+              onConfirm={() => handleConfirmSingleTransaction(transaction, message.id, index)}
+              isLoading={isSaving}
+            />
+          ))}
+          {/* Bulk save button for multiple transactions */}
+          <TouchableOpacity
+            style={styles.bulkSaveButton}
+            onPress={() => handleConfirmAllTransactions(message.parsedTransactions)}
+            disabled={isSaving}
+          >
+            <Text style={styles.bulkSaveButtonText}>
+              {isSaving ? '⏳ Đang lưu...' : `✅ Lưu tất cả (${message.parsedTransactions.length})`}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    // Handle single transaction
     if (message.type === 'confirmation' && message.parsedTransaction) {
       return (
         <View key={message.id} style={styles.messageWrapper}>
@@ -480,6 +620,19 @@ const styles = StyleSheet.create({
   },
   sendButtonText: {
     fontSize: FONT_SIZE.xxl,
+  },
+  bulkSaveButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
+    marginTop: SPACING.sm,
+    alignItems: 'center',
+    ...SHADOWS.sm,
+  },
+  bulkSaveButtonText: {
+    color: COLORS.textWhite,
+    fontSize: FONT_SIZE.md,
+    fontWeight: FONT_WEIGHT.bold as any,
   },
 });
 

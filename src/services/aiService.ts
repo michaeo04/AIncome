@@ -11,7 +11,8 @@ export interface ParseTransactionRequest {
 
 export interface ParseTransactionResponse {
   success: boolean;
-  transaction?: ParsedTransaction;
+  transaction?: ParsedTransaction; // For backward compatibility
+  transactions?: ParsedTransaction[]; // For multiple transactions
   error?: string;
 }
 
@@ -57,16 +58,28 @@ export async function parseTransactionWithAI(
       };
     }
 
-    if (!data || !data.transaction) {
+    // Handle array response (new format)
+    if (data && data.transactions && Array.isArray(data.transactions)) {
       return {
-        success: false,
-        error: 'No transaction data received'
+        success: true,
+        transactions: data.transactions,
+        // For backward compatibility, also set single transaction if only one
+        transaction: data.transactions.length === 1 ? data.transactions[0] : undefined
+      };
+    }
+
+    // Handle old single transaction format (backward compatibility)
+    if (data && data.transaction) {
+      return {
+        success: true,
+        transaction: data.transaction,
+        transactions: [data.transaction]
       };
     }
 
     return {
-      success: true,
-      transaction: data.transaction
+      success: false,
+      error: 'No transaction data received'
     };
   } catch (error: any) {
     console.error('AI Service error:', error);
@@ -78,14 +91,15 @@ export async function parseTransactionWithAI(
 }
 
 /**
- * Fallback parser - Simple rule-based parser for when Edge Function is unavailable
- * This provides basic functionality without requiring AI
+ * Parse a single transaction line
  */
-export function parseTransactionFallback(
-  message: string,
+function parseSingleTransaction(
+  line: string,
   categories: Category[]
 ): ParsedTransaction | null {
-  const normalizedMessage = message.toLowerCase().trim();
+  const normalizedMessage = line.toLowerCase().trim();
+
+  if (!normalizedMessage) return null;
 
   // Extract amount (look for numbers followed by k, tr, triệu, nghìn, đồng, etc.)
   let amount = 0;
@@ -211,7 +225,7 @@ export function parseTransactionFallback(
   }
 
   // Extract note (remove amount and common words)
-  let note = message
+  let note = line
     .replace(/\d+(?:\.\d+)?\s*(triệu|tr|tỷ|nghìn|k|đồng|vnd)/gi, '')
     .replace(/hôm nay|ngày|tháng|năm/gi, '')
     .trim();
@@ -229,6 +243,61 @@ export function parseTransactionFallback(
     date: new Date().toISOString(),
     confidence: Math.min(confidence, 0.85) // Cap fallback confidence at 85%
   };
+}
+
+/**
+ * Fallback parser - Simple rule-based parser for when Edge Function is unavailable
+ * Now supports multiple transactions separated by newlines or commas
+ */
+export function parseTransactionFallback(
+  message: string,
+  categories: Category[]
+): ParsedTransaction | ParsedTransaction[] | null {
+  const trimmedMessage = message.trim();
+
+  // Check for multiple transactions
+  // Split by newlines first, then by commas if no newlines
+  let lines: string[] = [];
+
+  if (trimmedMessage.includes('\n')) {
+    // Split by newlines
+    lines = trimmedMessage
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0);
+  } else if (trimmedMessage.includes(',')) {
+    // Split by commas (but avoid splitting amounts like "1,500")
+    // Look for patterns like "item amount, item amount"
+    const parts = trimmedMessage.split(',').map(p => p.trim());
+
+    // Only treat as multiple transactions if each part looks like a transaction
+    const looksLikeTransactions = parts.every(part => {
+      // Check if part contains a number (amount indicator)
+      return /\d+/.test(part);
+    });
+
+    if (looksLikeTransactions && parts.length > 1) {
+      lines = parts;
+    } else {
+      // Single transaction
+      lines = [trimmedMessage];
+    }
+  } else {
+    // Single transaction
+    lines = [trimmedMessage];
+  }
+
+  // Parse each line
+  const parsedTransactions = lines
+    .map(line => parseSingleTransaction(line, categories))
+    .filter(t => t !== null) as ParsedTransaction[];
+
+  if (parsedTransactions.length === 0) {
+    return null;
+  }
+
+  // Return single transaction or array
+  return parsedTransactions.length === 1 ? parsedTransactions[0] : parsedTransactions;
 }
 
 /**
