@@ -41,10 +41,29 @@ export const getChatbotFinancialContext = async (
       .from('chatbot_financial_context')
       .select('*')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle(); // Use maybeSingle() instead of single() to handle 0 rows gracefully
 
     if (error) {
       console.error('Error fetching chatbot context:', error);
+      return null;
+    }
+
+    // If no data exists, try to initialize it
+    if (!data) {
+      console.log('No chatbot context found, attempting to initialize...');
+      const initialized = await initializeUserAnalytics(userId);
+
+      if (initialized) {
+        // Try to fetch again after initialization
+        const { data: retryData } = await supabase
+          .from('chatbot_financial_context')
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        return retryData;
+      }
+
       return null;
     }
 
@@ -52,6 +71,98 @@ export const getChatbotFinancialContext = async (
   } catch (error) {
     console.error('Error in getChatbotFinancialContext:', error);
     return null;
+  }
+};
+
+/**
+ * Initialize analytics for a user who doesn't have them yet
+ * This calls the database function to calculate all metrics
+ */
+export const initializeUserAnalytics = async (
+  userId: string
+): Promise<boolean> => {
+  try {
+    console.log('Initializing analytics for user:', userId);
+
+    // First, try using the database function (if migration 008 was run)
+    try {
+      const { error } = await supabase.rpc('initialize_user_analytics', {
+        p_user_id: userId,
+      });
+
+      if (!error) {
+        console.log('Database function called successfully');
+
+        // Verify data was actually created
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+
+        const { data: verifyData } = await supabase
+          .from('chatbot_financial_context')
+          .select('id')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (verifyData) {
+          console.log('Analytics verified - data exists!');
+          return true;
+        } else {
+          console.log('Database function succeeded but no data created, trying fallback...');
+        }
+      } else {
+        console.log('Database function error, trying fallback...', error);
+      }
+    } catch (rpcError) {
+      console.log('RPC function not available, using fallback method');
+    }
+
+    // Fallback: Manually trigger calculations by calling the functions directly
+    console.log('Using fallback: Manually triggering metric calculations...');
+
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+
+    // Call calculate_monthly_metrics for current month
+    try {
+      await supabase.rpc('calculate_monthly_metrics', {
+        p_user_id: userId,
+        p_year: currentYear,
+        p_month: currentMonth,
+      });
+      console.log('Monthly metrics calculated');
+    } catch (err) {
+      console.log('Error calculating monthly metrics:', err);
+    }
+
+    // Call update_chatbot_context
+    try {
+      await supabase.rpc('update_chatbot_context', {
+        p_user_id: userId,
+      });
+      console.log('Chatbot context updated');
+    } catch (err) {
+      console.log('Error updating chatbot context:', err);
+    }
+
+    // Wait and verify again
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    const { data: finalCheck } = await supabase
+      .from('chatbot_financial_context')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (finalCheck) {
+      console.log('Fallback successful - analytics created!');
+      return true;
+    }
+
+    console.log('Fallback failed - analytics still not created');
+    return false;
+  } catch (error) {
+    console.error('Error in initializeUserAnalytics:', error);
+    return false;
   }
 };
 

@@ -47,7 +47,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
   const [currency, setCurrency] = useState('VND');
   const [userPersonalization, setUserPersonalization] = useState<UserPersonalization | undefined>(undefined);
   const [isSaving, setIsSaving] = useState(false);
-  const [showQuickActions, setShowQuickActions] = useState(true);
+  const [showQuickActions, setShowQuickActions] = useState(false); // Start hidden, toggle with button
   const scrollViewRef = useRef<ScrollView>(null);
 
   // Fetch categories, currency, and personalization on mount
@@ -364,10 +364,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
 
   const handleQuickAction = (question: string) => {
     setInputText(question);
-    // Hide quick actions after first use
-    setShowQuickActions(false);
     // Trigger send immediately
     setTimeout(() => handleSend(), 100);
+  };
+
+  const toggleQuickActions = () => {
+    setShowQuickActions(!showQuickActions);
   };
 
   const handleConfirmAllTransactions = async (transactions: any[]) => {
@@ -525,10 +527,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
         )}
       </ScrollView>
 
-      {/* Quick Action Buttons */}
-      {showQuickActions && messages.length === 0 && (
+      {/* Quick Action Buttons - Toggleable */}
+      {showQuickActions && (
         <View style={styles.quickActionsContainer}>
-          <Text style={styles.quickActionsTitle}>💡 Hỏi nhanh:</Text>
+          <View style={styles.quickActionsHeader}>
+            <Text style={styles.quickActionsTitle}>💡 Hỏi nhanh về tài chính:</Text>
+            <TouchableOpacity onPress={toggleQuickActions} style={styles.closeQuickActions}>
+              <Text style={styles.closeQuickActionsText}>✕</Text>
+            </TouchableOpacity>
+          </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickActionsScroll}>
             <TouchableOpacity
               style={styles.quickActionButton}
@@ -575,6 +582,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
 
       {/* Input */}
       <View style={styles.inputContainer}>
+        <TouchableOpacity
+          style={styles.quickActionsToggle}
+          onPress={toggleQuickActions}
+        >
+          <Text style={styles.quickActionsToggleText}>💡</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.clearButton}
           onPress={() => {
@@ -720,13 +734,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.sm,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
+    ...SHADOWS.sm,
+  },
+  quickActionsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.sm,
+    paddingHorizontal: SPACING.xs,
   },
   quickActionsTitle: {
     fontSize: FONT_SIZE.sm,
     fontWeight: FONT_WEIGHT.semibold as any,
     color: COLORS.textSecondary,
-    marginBottom: SPACING.sm,
-    marginLeft: SPACING.xs,
+  },
+  closeQuickActions: {
+    padding: SPACING.xs,
+  },
+  closeQuickActionsText: {
+    fontSize: FONT_SIZE.lg,
+    color: COLORS.textTertiary,
+    fontWeight: FONT_WEIGHT.bold as any,
+  },
+  quickActionsToggle: {
+    padding: SPACING.sm,
+    marginRight: SPACING.xs,
+  },
+  quickActionsToggleText: {
+    fontSize: FONT_SIZE.xl,
   },
   quickActionsScroll: {
     flexGrow: 0,

@@ -477,7 +477,19 @@ export async function getFinancialAdvice(
     const context = await getChatbotFinancialContext(userId);
 
     if (!context) {
-      return "Tôi chưa có đủ dữ liệu để phân tích tài chính của bạn. Hãy bắt đầu thêm một số giao dịch để tôi có thể cung cấp lời khuyên cá nhân hóa!";
+      return `Tôi chưa có đủ dữ liệu để phân tích tài chính của bạn.
+
+📝 **Để sử dụng tính năng tư vấn tài chính:**
+
+1️⃣ Thêm một số giao dịch (ít nhất 1-2 giao dịch)
+2️⃣ Đợi vài giây để hệ thống phân tích
+3️⃣ Hỏi lại câu hỏi về tài chính
+
+💡 **Hoặc hãy thử:**
+- "Ăn phở 50k" (thêm giao dịch)
+- Sau đó hỏi: "Tình hình tài chính của tôi thế nào?"
+
+Nếu bạn đã có nhiều giao dịch nhưng vẫn thấy thông báo này, hãy liên hệ hỗ trợ!`;
     }
 
     // Get recent insights
