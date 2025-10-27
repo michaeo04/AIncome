@@ -1,7 +1,14 @@
 // AI Service - Handles communication with Supabase Edge Functions for AI parsing and chat
 
 import { supabase } from './supabase';
-import { ParsedTransaction, Category, ChatMessage, UserPersonalization } from '../types';
+import { ParsedTransaction, Category, ChatMessage, UserPersonalization, ChatIntent, IntentClassificationResult } from '../types';
+import {
+  getChatbotFinancialContext,
+  getLastNMonths,
+  getActiveInsights,
+  getFinancialHealthInterpretation,
+  getSavingsRateInterpretation,
+} from './financialAnalyticsService';
 
 export interface ParseTransactionRequest {
   message: string;
@@ -357,4 +364,254 @@ export async function chatWithGemini(
       error: error.message || 'An unexpected error occurred'
     };
   }
+}
+
+/**
+ * Classify user's intent from their message
+ * Determines if user wants to create transaction, get financial advice, or just chat
+ */
+export function classifyIntent(message: string): IntentClassificationResult {
+  const lowerMessage = message.toLowerCase().trim();
+
+  // Transaction keywords - high priority
+  const transactionKeywords = [
+    'mua', 'chi', 'trả', 'đóng', 'nộp', 'ăn', 'uống',
+    'nhận', 'được', 'thu', 'lương', 'thưởng', 'bán',
+    'triệu', 'nghìn', 'đồng', 'vnd', 'k',
+  ];
+
+  // Check if message contains amount patterns (strong indicator of transaction)
+  const hasAmount = /\d+(?:\.\d+)?\s*(triệu|tr|tỷ|nghìn|k|đồng|vnd)/i.test(lowerMessage);
+
+  if (hasAmount) {
+    return { intent: 'create_transaction', confidence: 0.95 };
+  }
+
+  // Check for transaction keywords
+  const transactionKeywordCount = transactionKeywords.filter(kw =>
+    lowerMessage.includes(kw)
+  ).length;
+
+  if (transactionKeywordCount >= 2) {
+    return { intent: 'create_transaction', confidence: 0.85 };
+  }
+
+  // Financial advice keywords
+  const adviceKeywords = [
+    'làm sao', 'thế nào', 'như thế nào',
+    'tài chính', 'tiết kiệm', 'chi tiêu',
+    'ngân sách', 'budget', 'tiền',
+    'phân tích', 'báo cáo', 'tóm tắt',
+    'xu hướng', 'thay đổi', 'so sánh',
+    'tư vấn', 'khuyên', 'nên',
+    'có thể', 'được không', 'đủ không',
+    'tình hình', 'sức khỏe tài chính',
+    'đang', 'đi đâu', 'ở đâu',
+    'top', 'nhiều nhất', 'cao nhất',
+    'tháng này', 'tháng trước', 'gần đây',
+  ];
+
+  // Check for financial advice patterns
+  const advicePatterns = [
+    /làm sao/i,
+    /thế nào/i,
+    /như thế nào/i,
+    /tôi (có thể|nên|cần)/i,
+    /(tiền|chi tiêu|thu nhập|tiết kiệm) (của tôi|tôi)/i,
+    /tình hình.*tài chính/i,
+    /sức khỏe.*tài chính/i,
+    /(đang|đã) (làm|chi|tiêu|tiết kiệm)/i,
+    /(tiền|thu nhập|chi tiêu) (đang|đi) (đâu|ở đâu)/i,
+    /(báo cáo|phân tích|tóm tắt)/i,
+    /nên.*không/i,
+    /có thể.*không/i,
+  ];
+
+  for (const pattern of advicePatterns) {
+    if (pattern.test(lowerMessage)) {
+      return { intent: 'financial_advice', confidence: 0.9 };
+    }
+  }
+
+  const adviceKeywordCount = adviceKeywords.filter(kw =>
+    lowerMessage.includes(kw)
+  ).length;
+
+  if (adviceKeywordCount >= 2) {
+    return { intent: 'financial_advice', confidence: 0.85 };
+  }
+
+  if (adviceKeywordCount >= 1) {
+    return { intent: 'financial_advice', confidence: 0.7 };
+  }
+
+  // Small talk - greetings and general conversation
+  const smallTalkKeywords = [
+    'xin chào', 'chào', 'hello', 'hi',
+    'cảm ơn', 'thanks', 'thank you',
+    'tạm biệt', 'bye', 'goodbye',
+    'bạn là ai', 'you are', 'what are you',
+    'giúp', 'help', 'hỗ trợ',
+  ];
+
+  const hasSmalltalk = smallTalkKeywords.some(kw => lowerMessage.includes(kw));
+
+  if (hasSmalltalk) {
+    return { intent: 'small_talk', confidence: 0.8 };
+  }
+
+  // Default to small_talk with low confidence if uncertain
+  return { intent: 'small_talk', confidence: 0.5 };
+}
+
+/**
+ * Get financial advice based on user's question and their financial data
+ */
+export async function getFinancialAdvice(
+  userId: string,
+  question: string,
+  userPersonalization?: UserPersonalization
+): Promise<string> {
+  try {
+    // Get user's financial context
+    const context = await getChatbotFinancialContext(userId);
+
+    if (!context) {
+      return "Tôi chưa có đủ dữ liệu để phân tích tài chính của bạn. Hãy bắt đầu thêm một số giao dịch để tôi có thể cung cấp lời khuyên cá nhân hóa!";
+    }
+
+    // Get recent insights
+    const insights = await getActiveInsights(userId);
+
+    // Get trend data
+    const last3Months = await getLastNMonths(userId, 3);
+
+    // Get interpretations
+    const healthInterp = getFinancialHealthInterpretation(context.financial_health_score);
+    const savingsInterp = getSavingsRateInterpretation(context.savings_rate_current);
+
+    // Build comprehensive context for AI
+    const systemPrompt = `
+Bạn là một cố vấn tài chính cá nhân thông minh. Hãy cung cấp lời khuyên tài chính dựa trên dữ liệu thực tế của người dùng.
+
+TÌNH HÌNH TÀI CHÍNH HIỆN TẠI:
+• Số dư hiện tại: ${context.current_balance.toLocaleString()} VND
+• Thu nhập tháng này: ${context.total_income_mtd.toLocaleString()} VND
+• Chi tiêu tháng này: ${context.total_expense_mtd.toLocaleString()} VND
+• Tỷ lệ tiết kiệm: ${context.savings_rate_current.toFixed(1)}% (${savingsInterp.level})
+• Điểm sức khỏe tài chính: ${context.financial_health_score}/100 (${healthInterp.level})
+
+TRUNG BÌNH 3 THÁNG GẦN NHẤT:
+• Thu nhập TB: ${context.avg_monthly_income.toLocaleString()} VND
+• Chi tiêu TB: ${context.avg_monthly_expense.toLocaleString()} VND
+• Tỷ lệ tiết kiệm TB: ${context.avg_savings_rate.toFixed(1)}%
+
+TÌNH TRẠNG NGÂN SÁCH:
+• Vượt mức: ${context.budgets_exceeded} ngân sách
+• Cảnh báo (80-100%): ${context.budgets_warning} ngân sách
+• Lành mạnh: ${context.budgets_healthy} ngân sách
+
+XU HƯỚNG:
+• Thu nhập: ${context.income_trend === 'increasing' ? 'Tăng' : context.income_trend === 'decreasing' ? 'Giảm' : 'Ổn định'}
+• Chi tiêu: ${context.expense_trend === 'increasing' ? 'Tăng' : context.expense_trend === 'decreasing' ? 'Giảm' : 'Ổn định'}
+
+QUỸ DỰ PHÒNG:
+• Hiện tại: ${context.emergency_fund_months.toFixed(1)} tháng chi tiêu
+• Mục tiêu khuyến nghị: 3-6 tháng
+
+TOP DANH MỤC CHI TIÊU:
+${context.top_spending_categories.slice(0, 5).map((cat, i) =>
+  `${i + 1}. ${cat.category}: ${cat.amount.toLocaleString()} VND (${cat.percentage.toFixed(1)}%)`
+).join('\n')}
+
+${insights.length > 0 ? `
+CÁC THÔNG TIN QUAN TRỌNG:
+${insights.slice(0, 3).map(insight =>
+  `• ${insight.title}: ${insight.message}`
+).join('\n')}
+` : ''}
+
+${last3Months.length >= 2 ? `
+LỊCH SỬ 3 THÁNG:
+${last3Months.map(m =>
+  `• Tháng ${m.month}/${m.year}: Thu ${m.total_income.toLocaleString()} | Chi ${m.total_expense.toLocaleString()} | Tiết kiệm ${m.savings_rate.toFixed(1)}%`
+).join('\n')}
+` : ''}
+
+THÔNG TIN CÁ NHÂN HÓA:
+${userPersonalization ? `
+• Mục tiêu tài chính: ${userPersonalization.financial_goals?.join(', ') || 'Chưa xác định'}
+• Kiến thức tài chính: ${userPersonalization.financial_knowledge || 'Chưa xác định'}
+• Mối quan tâm: ${userPersonalization.financial_concerns?.join(', ') || 'Chưa xác định'}
+` : 'Chưa có thông tin'}
+
+CHUẨN MỰC THAM KHẢO:
+• Tỷ lệ tiết kiệm khuyến nghị: 15-20%
+• Quỹ dự phòng mục tiêu: 3-6 tháng chi tiêu
+• Tuân thủ ngân sách: 100% hoặc tốt hơn
+
+HÃY:
+1. Đưa ra lời khuyên cụ thể, thiết thực dựa trên dữ liệu
+2. Động viên nhưng trung thực về các vấn đề cần cải thiện
+3. Đề xuất các hành động cụ thể có thể thực hiện
+4. Sử dụng ngôn ngữ thân thiện, dễ hiểu
+5. So sánh với các chuẩn mực để đưa ra góc nhìn rõ ràng
+
+TRÁNH:
+- Đưa ra lời khuyên chung chung không dựa trên dữ liệu
+- Chỉ liệt kê số liệu mà không giải thích ý nghĩa
+- Sử dụng thuật ngữ phức tạp nếu người dùng là người mới bắt đầu
+`;
+
+    // Call Gemini for intelligent response
+    const response = await chatWithGemini(question, [], {
+      ...userPersonalization,
+      has_completed_personalization: userPersonalization?.has_completed_personalization || false,
+    });
+
+    if (!response.success || !response.reply) {
+      // Fallback to basic summary if AI fails
+      return generateBasicFinancialSummary(context, healthInterp, savingsInterp);
+    }
+
+    return response.reply;
+  } catch (error) {
+    console.error('Error getting financial advice:', error);
+    return 'Xin lỗi, tôi đang gặp sự cố khi phân tích tài chính của bạn. Vui lòng thử lại sau.';
+  }
+}
+
+/**
+ * Generate basic financial summary as fallback
+ */
+function generateBasicFinancialSummary(
+  context: any,
+  healthInterp: any,
+  savingsInterp: any
+): string {
+  let summary = `📊 **Tổng Quan Tài Chính**\n\n`;
+
+  summary += `**Điểm Sức Khỏe Tài Chính:** ${context.financial_health_score}/100 (${healthInterp.level})\n`;
+  summary += `${healthInterp.description}\n\n`;
+
+  summary += `**Tình Hình Hiện Tại:**\n`;
+  summary += `• Số dư: ${context.current_balance.toLocaleString()} VND\n`;
+  summary += `• Thu nhập tháng này: ${context.total_income_mtd.toLocaleString()} VND\n`;
+  summary += `• Chi tiêu tháng này: ${context.total_expense_mtd.toLocaleString()} VND\n`;
+  summary += `• Tỷ lệ tiết kiệm: ${context.savings_rate_current.toFixed(1)}% (${savingsInterp.level})\n\n`;
+
+  if (context.budgets_exceeded > 0) {
+    summary += `⚠️ **Cảnh báo:** ${context.budgets_exceeded} ngân sách đã vượt mức\n\n`;
+  }
+
+  if (context.emergency_fund_months < 3) {
+    summary += `💡 **Khuyến nghị:** Xây dựng quỹ dự phòng để đủ chi tiêu 3-6 tháng\n`;
+  }
+
+  if (context.top_spending_categories.length > 0) {
+    const topCategory = context.top_spending_categories[0];
+    summary += `\n**Chi Tiêu Nhiều Nhất:** ${topCategory.category} (${topCategory.percentage.toFixed(1)}%)\n`;
+  }
+
+  return summary;
 }

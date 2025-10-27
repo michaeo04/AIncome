@@ -183,9 +183,156 @@ export interface ParsedTransaction {
   confidence: number;
 }
 
-export type ChatIntent = 'small_talk' | 'create_transaction' | 'unknown';
+export type ChatIntent = 'small_talk' | 'create_transaction' | 'financial_advice' | 'unknown';
 
 export interface IntentClassificationResult {
   intent: ChatIntent;
   confidence: number;
+}
+
+// ========================================
+// Financial Analytics Types
+// ========================================
+
+export interface FinancialMetricsDaily {
+  id: string;
+  user_id: string;
+  metric_date: string;
+  total_income: number;
+  total_expense: number;
+  net_savings: number;
+  running_balance: number;
+  income_transaction_count: number;
+  expense_transaction_count: number;
+  income_by_category: Record<string, number>;
+  expense_by_category: Record<string, number>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FinancialMetricsMonthly {
+  id: string;
+  user_id: string;
+  year: number;
+  month: number;
+  total_income: number;
+  total_expense: number;
+  net_savings: number;
+  savings_rate: number;
+  budget_adherence_rate: number;
+  budgets_on_track: number;
+  budgets_over_limit: number;
+  total_budgets: number;
+  active_goals_count: number;
+  goals_on_track: number;
+  goals_behind: number;
+  month_end_balance: number;
+  month_start_balance: number;
+  income_transaction_count: number;
+  expense_transaction_count: number;
+  income_by_category: Record<string, number>;
+  expense_by_category: Record<string, number>;
+  top_expense_category: string | null;
+  top_expense_amount: number;
+  top_income_category: string | null;
+  top_income_amount: number;
+  income_change_percent: number;
+  expense_change_percent: number;
+  savings_change_percent: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type InsightType =
+  | 'spending_alert'
+  | 'savings_achievement'
+  | 'budget_warning'
+  | 'goal_progress'
+  | 'trend_positive'
+  | 'trend_negative'
+  | 'recommendation'
+  | 'milestone'
+  | 'anomaly';
+
+export type InsightSeverity = 'info' | 'warning' | 'critical' | 'success';
+
+export interface FinancialInsight {
+  id: string;
+  user_id: string;
+  insight_type: InsightType;
+  title: string;
+  message: string;
+  severity: InsightSeverity;
+  metric_period: string | null;
+  related_category: string | null;
+  amount: number | null;
+  percentage: number | null;
+  recommendation_text: string | null;
+  action_required: boolean;
+  is_active: boolean;
+  acknowledged: boolean;
+  acknowledged_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type TrendDirection = 'increasing' | 'stable' | 'decreasing' | 'unknown';
+
+export interface TopSpendingCategory {
+  category: string;
+  amount: number;
+  percentage: number;
+}
+
+export interface ChatbotFinancialContext {
+  id: string;
+  user_id: string;
+  current_balance: number;
+  total_income_mtd: number;
+  total_expense_mtd: number;
+  savings_rate_current: number;
+  avg_monthly_income: number;
+  avg_monthly_expense: number;
+  avg_savings_rate: number;
+  budgets_exceeded: number;
+  budgets_warning: number;
+  budgets_healthy: number;
+  goals_achieved: number;
+  goals_on_track: number;
+  goals_behind: number;
+  financial_health_score: number;
+  top_spending_categories: TopSpendingCategory[];
+  income_trend: TrendDirection;
+  expense_trend: TrendDirection;
+  emergency_fund_months: number;
+  last_updated: string;
+  created_at: string;
+}
+
+export interface LatestFinancialStatus {
+  user_id: string;
+  year: number;
+  month: number;
+  total_income: number;
+  total_expense: number;
+  net_savings: number;
+  savings_rate: number;
+  budget_adherence_rate: number;
+  current_balance: number;
+  top_expense_category: string | null;
+  top_expense_amount: number;
+  income_change_percent: number;
+  expense_change_percent: number;
+  financial_health_score: number;
+  emergency_fund_months: number;
+  income_trend: TrendDirection;
+  expense_trend: TrendDirection;
+}
+
+// Financial Advice Response Types
+export interface FinancialAdviceResponse {
+  advice: string;
+  insights: FinancialInsight[];
+  context: ChatbotFinancialContext;
+  recommendations: string[];
 }

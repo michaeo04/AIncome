@@ -16,8 +16,13 @@ import {
 import { useChatStore } from '../../stores/chatStore';
 import { useAuthStore } from '../../stores/authStore';
 import { Category, UserPersonalization } from '../../types';
-import { classifyIntent } from '../../utils/intentClassifier';
-import { parseTransactionWithAI, parseTransactionFallback, chatWithGemini } from '../../services/aiService';
+import {
+  classifyIntent,
+  parseTransactionWithAI,
+  parseTransactionFallback,
+  chatWithGemini,
+  getFinancialAdvice,
+} from '../../services/aiService';
 import TransactionConfirmationCard from './TransactionConfirmationCard';
 import { supabase } from '../../services/supabase';
 import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT, SHADOWS } from '../../theme/modernTheme';
@@ -42,6 +47,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
   const [currency, setCurrency] = useState('VND');
   const [userPersonalization, setUserPersonalization] = useState<UserPersonalization | undefined>(undefined);
   const [isSaving, setIsSaving] = useState(false);
+  const [showQuickActions, setShowQuickActions] = useState(true);
   const scrollViewRef = useRef<ScrollView>(null);
 
   // Fetch categories, currency, and personalization on mount
@@ -148,6 +154,24 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
           // Fallback if AI fails
           addAssistantMessage(
             'Xin lỗi, mình đang gặp chút vấn đề. Bạn có thể thử lại không? 😊'
+          );
+        }
+
+        setProcessing(false);
+        return;
+      }
+
+      if (intentResult.intent === 'financial_advice') {
+        // Handle financial advice request
+        addAssistantMessage('📊 Để mình phân tích tài chính của bạn...');
+
+        try {
+          const advice = await getFinancialAdvice(user!.id, message, userPersonalization);
+          addAssistantMessage(advice);
+        } catch (error) {
+          console.error('Error getting financial advice:', error);
+          addAssistantMessage(
+            'Xin lỗi, mình đang gặp sự cố khi phân tích tài chính. Vui lòng thử lại sau. 😊'
           );
         }
 
@@ -338,6 +362,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
     );
   };
 
+  const handleQuickAction = (question: string) => {
+    setInputText(question);
+    // Hide quick actions after first use
+    setShowQuickActions(false);
+    // Trigger send immediately
+    setTimeout(() => handleSend(), 100);
+  };
+
   const handleConfirmAllTransactions = async (transactions: any[]) => {
     if (!user) return;
 
@@ -493,6 +525,54 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
         )}
       </ScrollView>
 
+      {/* Quick Action Buttons */}
+      {showQuickActions && messages.length === 0 && (
+        <View style={styles.quickActionsContainer}>
+          <Text style={styles.quickActionsTitle}>💡 Hỏi nhanh:</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickActionsScroll}>
+            <TouchableOpacity
+              style={styles.quickActionButton}
+              onPress={() => handleQuickAction('Tình hình tài chính của tôi thế nào?')}
+            >
+              <Text style={styles.quickActionIcon}>📊</Text>
+              <Text style={styles.quickActionText}>Tình hình tài chính</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.quickActionButton}
+              onPress={() => handleQuickAction('Tiền của tôi đang đi đâu?')}
+            >
+              <Text style={styles.quickActionIcon}>💰</Text>
+              <Text style={styles.quickActionText}>Chi tiêu ở đâu?</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.quickActionButton}
+              onPress={() => handleQuickAction('Tôi nên tiết kiệm bao nhiêu?')}
+            >
+              <Text style={styles.quickActionIcon}>🎯</Text>
+              <Text style={styles.quickActionText}>Lời khuyên tiết kiệm</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.quickActionButton}
+              onPress={() => handleQuickAction('Báo cáo tài chính tháng này')}
+            >
+              <Text style={styles.quickActionIcon}>📈</Text>
+              <Text style={styles.quickActionText}>Báo cáo tháng này</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.quickActionButton}
+              onPress={() => handleQuickAction('Chi tiêu tháng này thay đổi như thế nào?')}
+            >
+              <Text style={styles.quickActionIcon}>📉</Text>
+              <Text style={styles.quickActionText}>Xu hướng chi tiêu</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      )}
+
       {/* Input */}
       <View style={styles.inputContainer}>
         <TouchableOpacity
@@ -633,6 +713,45 @@ const styles = StyleSheet.create({
     color: COLORS.textWhite,
     fontSize: FONT_SIZE.md,
     fontWeight: FONT_WEIGHT.bold as any,
+  },
+  quickActionsContainer: {
+    backgroundColor: COLORS.surface,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.sm,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  quickActionsTitle: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: FONT_WEIGHT.semibold as any,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.sm,
+    marginLeft: SPACING.xs,
+  },
+  quickActionsScroll: {
+    flexGrow: 0,
+  },
+  quickActionButton: {
+    backgroundColor: COLORS.background,
+    borderRadius: BORDER_RADIUS.lg,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    marginRight: SPACING.sm,
+    alignItems: 'center',
+    minWidth: 100,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    ...SHADOWS.xs,
+  },
+  quickActionIcon: {
+    fontSize: FONT_SIZE.xl,
+    marginBottom: SPACING.xs,
+  },
+  quickActionText: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textPrimary,
+    fontWeight: FONT_WEIGHT.medium as any,
+    textAlign: 'center',
   },
 });
 
