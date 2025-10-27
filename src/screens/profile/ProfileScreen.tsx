@@ -11,6 +11,8 @@ import {
   ActivityIndicator,
   RefreshControl,
   SafeAreaView,
+  Alert,
+  Linking,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -72,6 +74,26 @@ const ProfileScreen: React.FC = () => {
 
   const handleSignOut = async () => {
     await signOut();
+  };
+
+  const handleHelpFAQ = () => {
+    Alert.alert(
+      'Help & FAQ',
+      'Need help with AIncome?\n\nCommon topics:\n• How to add transactions\n• Managing budgets\n• Setting up saving goals\n• Understanding reports',
+      [
+        { text: 'OK' },
+      ]
+    );
+  };
+
+  const handleAbout = () => {
+    Alert.alert(
+      'About AIncome',
+      'AIncome - Personal Finance Tracker\n\nVersion: 1.0.0\n\nA comprehensive mobile app for managing your income, expenses, budgets, and financial goals.\n\nBuilt with React Native & Supabase',
+      [
+        { text: 'OK' },
+      ]
+    );
   };
 
   const getAvatarUrl = () => {
@@ -215,7 +237,7 @@ const ProfileScreen: React.FC = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Support</Text>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={handleHelpFAQ}>
             <Text style={styles.menuIcon}>📖</Text>
             <View style={styles.menuContent}>
               <Text style={styles.menuTitle}>Help & FAQ</Text>
@@ -224,7 +246,7 @@ const ProfileScreen: React.FC = () => {
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={handleAbout}>
             <Text style={styles.menuIcon}>ℹ️</Text>
             <View style={styles.menuContent}>
               <Text style={styles.menuTitle}>About</Text>

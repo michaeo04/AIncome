@@ -10,6 +10,7 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../../stores/authStore';
@@ -185,6 +186,50 @@ const SecurityScreen: React.FC = () => {
     }
   };
 
+  const handleExportData = async () => {
+    Alert.alert(
+      'Export Data',
+      'Export all your financial data including transactions, budgets, and goals.\n\nYour data will be exported in JSON format.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Export',
+          onPress: async () => {
+            try {
+              // Future implementation: Export data to JSON
+              Alert.alert(
+                'Coming Soon',
+                'Data export feature is currently under development. You will be able to download all your financial data soon.'
+              );
+            } catch (error) {
+              Alert.alert('Error', 'Failed to export data');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handlePrivacyPolicy = () => {
+    Alert.alert(
+      'Privacy Policy',
+      'AIncome Privacy Policy\n\nWe take your privacy seriously. Your financial data is:\n• Encrypted and securely stored\n• Never shared with third parties\n• Only accessible by you\n• Protected by industry-standard security',
+      [
+        { text: 'OK' },
+      ]
+    );
+  };
+
+  const handleTermsOfService = () => {
+    Alert.alert(
+      'Terms of Service',
+      'AIncome Terms of Service\n\nBy using AIncome, you agree to:\n• Use the app for personal financial management\n• Keep your account credentials secure\n• Take responsibility for your financial decisions\n\nVersion 1.0.0',
+      [
+        { text: 'OK' },
+      ]
+    );
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -297,7 +342,7 @@ const SecurityScreen: React.FC = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Data & Privacy</Text>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={handleExportData}>
             <Text style={styles.menuIcon}>📥</Text>
             <View style={styles.menuContent}>
               <Text style={styles.menuTitle}>Export Data</Text>
@@ -308,7 +353,7 @@ const SecurityScreen: React.FC = () => {
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={handlePrivacyPolicy}>
             <Text style={styles.menuIcon}>📄</Text>
             <View style={styles.menuContent}>
               <Text style={styles.menuTitle}>Privacy Policy</Text>
@@ -319,7 +364,7 @@ const SecurityScreen: React.FC = () => {
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={handleTermsOfService}>
             <Text style={styles.menuIcon}>📋</Text>
             <View style={styles.menuContent}>
               <Text style={styles.menuTitle}>Terms of Service</Text>
