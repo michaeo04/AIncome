@@ -3,6 +3,7 @@
 
 import { Alert } from 'react-native';
 import { supabase } from '../services/supabase';
+import { addThousandSeparators } from './helpers';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -604,11 +605,7 @@ export const validateCategoryDeletion = async (
  * Format amount for display in messages
  */
 const formatAmount = (amount: number): string => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'decimal',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
+  return addThousandSeparators(Math.round(amount), ',');
 };
 
 /**

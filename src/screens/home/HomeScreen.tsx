@@ -13,7 +13,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, CommonActions } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { HomeStackParamList } from '../../navigation/types';
 import { supabase } from '../../services/supabase';
@@ -169,6 +169,11 @@ const HomeScreen: React.FC = () => {
     navigation.navigate('TransactionDetail', { transactionId });
   };
 
+  // Navigate to all transactions
+  const handleSeeAllTransactions = () => {
+    navigation.navigate('AllTransactions');
+  };
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
@@ -251,12 +256,64 @@ const HomeScreen: React.FC = () => {
           </View>
         </LinearGradient>
 
+        {/* Quick Actions */}
+        <View style={styles.quickActionsSection}>
+          <View style={styles.quickActionsGrid}>
+            <TouchableOpacity
+              style={styles.quickActionCard}
+              onPress={handleAddTransaction}
+            >
+              <View style={[styles.quickActionIcon, { backgroundColor: COLORS.primary + '20' }]}>
+                <Text style={styles.quickActionIconText}>💸</Text>
+              </View>
+              <Text style={styles.quickActionLabel}>Add Expense</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.quickActionCard}
+              onPress={handleAddTransaction}
+            >
+              <View style={[styles.quickActionIcon, { backgroundColor: COLORS.success + '20' }]}>
+                <Text style={styles.quickActionIconText}>💰</Text>
+              </View>
+              <Text style={styles.quickActionLabel}>Add Income</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.quickActionCard}
+              onPress={handleSeeAllTransactions}
+            >
+              <View style={[styles.quickActionIcon, { backgroundColor: COLORS.secondary + '20' }]}>
+                <Text style={styles.quickActionIconText}>📊</Text>
+              </View>
+              <Text style={styles.quickActionLabel}>View All</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.quickActionCard}
+              onPress={() => {
+                navigation.dispatch(
+                  CommonActions.navigate({
+                    name: 'BudgetTab',
+                    params: { screen: 'Budget' },
+                  })
+                );
+              }}
+            >
+              <View style={[styles.quickActionIcon, { backgroundColor: COLORS.warning + '20' }]}>
+                <Text style={styles.quickActionIconText}>🎯</Text>
+              </View>
+              <Text style={styles.quickActionLabel}>Budgets</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* Recent Transactions */}
         <View style={styles.transactionsSection}>
           <View style={styles.transactionsHeader}>
             <Text style={styles.sectionTitle}>Recent Transactions</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAllText}>See All</Text>
+            <TouchableOpacity onPress={handleSeeAllTransactions}>
+              <Text style={styles.seeAllText}>See All →</Text>
             </TouchableOpacity>
           </View>
 
@@ -427,6 +484,39 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZE.md,
     fontWeight: FONT_WEIGHT.semibold,
     color: COLORS.textWhite,
+  },
+  quickActionsSection: {
+    marginBottom: SPACING.xl,
+  },
+  quickActionsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: SPACING.sm,
+  },
+  quickActionCard: {
+    flex: 1,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.md,
+    alignItems: 'center',
+    ...SHADOWS.sm,
+  },
+  quickActionIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: BORDER_RADIUS.round,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SPACING.sm,
+  },
+  quickActionIconText: {
+    fontSize: FONT_SIZE.xxl,
+  },
+  quickActionLabel: {
+    fontSize: FONT_SIZE.xs,
+    fontWeight: FONT_WEIGHT.semibold,
+    color: COLORS.textPrimary,
+    textAlign: 'center',
   },
   transactionsSection: {
     marginBottom: SPACING.lg,

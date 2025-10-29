@@ -23,6 +23,7 @@ import {
   chatWithGemini,
   getFinancialAdvice,
 } from '../../services/aiService';
+import { refreshMyAnalytics } from '../../services/financialAnalyticsService';
 import TransactionConfirmationCard from './TransactionConfirmationCard';
 import { supabase } from '../../services/supabase';
 import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT, SHADOWS } from '../../theme/modernTheme';
@@ -276,6 +277,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
       addAssistantMessage('✅ Đã lưu giao dịch thành công!');
       setIsSaving(false);
 
+      // Refresh analytics after adding transaction (fallback if trigger doesn't work)
+      console.log('📊 Refreshing analytics after chatbot transaction...');
+      refreshMyAnalytics().then(result => {
+        if (result.success) {
+          console.log('✓ Analytics refreshed from chatbot:', result.message);
+        } else {
+          console.warn('⚠️ Failed to refresh analytics from chatbot:', result.message);
+        }
+      }).catch(err => {
+        console.error('❌ Error refreshing analytics from chatbot:', err);
+      });
+
       // Notify parent to refresh
       setTimeout(() => {
         onTransactionSaved();
@@ -362,10 +375,28 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
     );
   };
 
-  const handleQuickAction = (question: string) => {
-    setInputText(question);
-    // Trigger send immediately
-    setTimeout(() => handleSend(), 100);
+  const handleQuickAction = async (displayMessage: string, actualPrompt?: string) => {
+    // Show short display message to user
+    addUserMessage(displayMessage);
+
+    // Set processing state
+    setProcessing(true);
+
+    try {
+      // Use actualPrompt for processing, or displayMessage if no actualPrompt provided
+      const promptToSend = actualPrompt || displayMessage;
+
+      // Financial advice (quick actions always request financial advice)
+      addAssistantMessage('📊 Để mình phân tích tài chính của bạn...');
+
+      const advice = await getFinancialAdvice(user!.id, promptToSend, userPersonalization);
+      addAssistantMessage(advice);
+    } catch (error) {
+      console.error('Error getting financial advice:', error);
+      addAssistantMessage('Xin lỗi, mình đang gặp chút vấn đề khi phân tích. Bạn có thể thử lại không? 😊');
+    }
+
+    setProcessing(false);
   };
 
   const toggleQuickActions = () => {
@@ -407,6 +438,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
 
       addAssistantMessage(`✅ Đã lưu ${transactions.length} giao dịch thành công!`);
       setIsSaving(false);
+
+      // Refresh analytics after adding transactions (fallback if trigger doesn't work)
+      console.log('📊 Refreshing analytics after bulk chatbot transactions...');
+      refreshMyAnalytics().then(result => {
+        if (result.success) {
+          console.log('✓ Analytics refreshed from chatbot bulk save:', result.message);
+        } else {
+          console.warn('⚠️ Failed to refresh analytics from chatbot bulk save:', result.message);
+        }
+      }).catch(err => {
+        console.error('❌ Error refreshing analytics from chatbot bulk save:', err);
+      });
 
       // Notify parent to refresh
       setTimeout(() => {
@@ -539,7 +582,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickActionsScroll}>
             <TouchableOpacity
               style={styles.quickActionButton}
-              onPress={() => handleQuickAction('Tình hình tài chính của tôi thế nào?')}
+              onPress={() => handleQuickAction(
+                '📊 Tình hình tài chính của tôi thế nào?',
+                'Phân tích tổng quan sức khỏe tài chính của tôi hiện tại. Đánh giá số dư, thu chi, tỷ lệ tiết kiệm và điểm sức khỏe tài chính. Cho tôi biết tôi đang làm tốt ở đâu và cần cải thiện gì.'
+              )}
             >
               <Text style={styles.quickActionIcon}>📊</Text>
               <Text style={styles.quickActionText}>Tình hình tài chính</Text>
@@ -547,7 +593,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
 
             <TouchableOpacity
               style={styles.quickActionButton}
-              onPress={() => handleQuickAction('Tiền của tôi đang đi đâu?')}
+              onPress={() => handleQuickAction(
+                '💰 Tiền của tôi đang đi đâu?',
+                'Phân tích chi tiết tiền của tôi đang được chi tiêu vào đâu. Tập trung vào top 5 danh mục chi tiêu lớn nhất, tỷ lệ phần trăm từng danh mục, và so sánh với mức trung bình. Chỉ ra những khoản chi tiêu nào cần kiểm soát.'
+              )}
             >
               <Text style={styles.quickActionIcon}>💰</Text>
               <Text style={styles.quickActionText}>Chi tiêu ở đâu?</Text>
@@ -555,7 +604,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
 
             <TouchableOpacity
               style={styles.quickActionButton}
-              onPress={() => handleQuickAction('Tôi nên tiết kiệm bao nhiêu?')}
+              onPress={() => handleQuickAction(
+                '🎯 Tôi nên tiết kiệm bao nhiêu?',
+                'Đưa ra lời khuyên cụ thể về tiết kiệm. Dựa trên tỷ lệ tiết kiệm hiện tại của tôi, cho tôi biết tôi nên tiết kiệm bao nhiêu mỗi tháng, những danh mục chi tiêu nào có thể cắt giảm, và chiến lược tiết kiệm phù hợp với tình hình của tôi.'
+              )}
             >
               <Text style={styles.quickActionIcon}>🎯</Text>
               <Text style={styles.quickActionText}>Lời khuyên tiết kiệm</Text>
@@ -563,7 +615,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
 
             <TouchableOpacity
               style={styles.quickActionButton}
-              onPress={() => handleQuickAction('Báo cáo tài chính tháng này')}
+              onPress={() => handleQuickAction(
+                '📈 Báo cáo tài chính tháng này',
+                'Báo cáo chi tiết tài chính tháng này. Bao gồm tổng thu nhập, tổng chi tiêu, tiền tiết kiệm được, so sánh với tháng trước và trung bình 3 tháng. Đánh giá hiệu suất và đưa ra nhận xét.'
+              )}
             >
               <Text style={styles.quickActionIcon}>📈</Text>
               <Text style={styles.quickActionText}>Báo cáo tháng này</Text>
@@ -571,7 +626,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
 
             <TouchableOpacity
               style={styles.quickActionButton}
-              onPress={() => handleQuickAction('Chi tiêu tháng này thay đổi như thế nào?')}
+              onPress={() => handleQuickAction(
+                '📉 Xu hướng chi tiêu của tôi',
+                'Phân tích xu hướng chi tiêu của tôi. Chi tiêu tháng này có tăng hay giảm so với tháng trước? Xu hướng 3 tháng gần đây thế nào? Danh mục nào tăng nhiều nhất? Cảnh báo nếu có dấu hiệu chi tiêu quá mức.'
+              )}
             >
               <Text style={styles.quickActionIcon}>📉</Text>
               <Text style={styles.quickActionText}>Xu hướng chi tiêu</Text>

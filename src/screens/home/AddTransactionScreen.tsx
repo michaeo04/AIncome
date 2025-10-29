@@ -23,6 +23,7 @@ import { useChatStore } from '../../stores/chatStore';
 import { Category } from '../../types';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT, SHADOWS } from '../../theme/modernTheme';
+import { refreshMyAnalytics } from '../../services/financialAnalyticsService';
 import {
   validateTransactionAmount,
   validateTransactionDate,
@@ -400,6 +401,18 @@ const AddTransactionScreen: React.FC = () => {
           .insert([transactionData]);
 
         if (error) throw error;
+
+        // Refresh analytics after adding transaction (fallback if trigger doesn't work)
+        console.log('📊 Refreshing analytics after transaction insert...');
+        refreshMyAnalytics().then(result => {
+          if (result.success) {
+            console.log('✓ Analytics refreshed:', result.message);
+          } else {
+            console.warn('⚠️ Failed to refresh analytics:', result.message);
+          }
+        }).catch(err => {
+          console.error('❌ Error refreshing analytics:', err);
+        });
 
         // Check budget impact after successful save
         if (type === 'expense') {

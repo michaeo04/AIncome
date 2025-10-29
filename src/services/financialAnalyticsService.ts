@@ -84,17 +84,17 @@ export const initializeUserAnalytics = async (
   try {
     console.log('Initializing analytics for user:', userId);
 
-    // First, try using the database function (if migration 008 was run)
+    // Try the new simplified function from migration 012
     try {
-      const { error } = await supabase.rpc('initialize_user_analytics', {
+      const { error } = await supabase.rpc('update_user_analytics', {
         p_user_id: userId,
       });
 
       if (!error) {
-        console.log('Database function called successfully');
+        console.log('Analytics updated via update_user_analytics()');
 
         // Verify data was actually created
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
 
         const { data: verifyData } = await supabase
           .from('chatbot_financial_context')
@@ -103,35 +103,44 @@ export const initializeUserAnalytics = async (
           .maybeSingle();
 
         if (verifyData) {
-          console.log('Analytics verified - data exists!');
+          console.log('✓ Analytics verified - data exists!');
           return true;
         } else {
-          console.log('Database function succeeded but no data created, trying fallback...');
+          console.log('Function succeeded but no data created');
         }
       } else {
-        console.log('Database function error, trying fallback...', error);
+        console.log('update_user_analytics error:', error);
       }
     } catch (rpcError) {
-      console.log('RPC function not available, using fallback method');
+      console.log('update_user_analytics not available, trying old functions...', rpcError);
     }
 
-    // Fallback: Manually trigger calculations by calling the functions directly
-    console.log('Using fallback: Manually triggering metric calculations...');
-
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth() + 1;
-
-    // Call calculate_monthly_metrics for current month
+    // Fallback: Try old initialize function
     try {
-      await supabase.rpc('calculate_monthly_metrics', {
+      const { error } = await supabase.rpc('initialize_user_analytics', {
         p_user_id: userId,
-        p_year: currentYear,
-        p_month: currentMonth,
       });
-      console.log('Monthly metrics calculated');
-    } catch (err) {
-      console.log('Error calculating monthly metrics:', err);
+
+      if (!error) {
+        console.log('Analytics initialized via old function');
+
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        const { data: verifyData } = await supabase
+          .from('chatbot_financial_context')
+          .select('id')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (verifyData) {
+          console.log('✓ Analytics verified via old function!');
+          return true;
+        }
+      } else {
+        console.log('initialize_user_analytics error:', error);
+      }
+    } catch (oldError) {
+      console.log('Old initialize function not available:', oldError);
     }
 
     // Call update_chatbot_context
@@ -514,6 +523,65 @@ export const refreshChatbotContext = async (
   } catch (error) {
     console.error('Error in refreshChatbotContext:', error);
     return false;
+  }
+};
+
+/**
+ * Manually refresh all analytics for the current user
+ * This should be called after adding/updating/deleting transactions
+ * if the automatic trigger doesn't work
+ */
+export const refreshMyAnalytics = async (): Promise<{
+  success: boolean;
+  message: string;
+}> => {
+  try {
+    // Try the new refresh_my_analytics function from migration 012
+    const { data, error } = await supabase.rpc('refresh_my_analytics');
+
+    if (!error && data) {
+      console.log('✓ Analytics refreshed:', data);
+      return {
+        success: true,
+        message: data,
+      };
+    }
+
+    if (error) {
+      console.error('Error calling refresh_my_analytics:', error);
+    }
+
+    // Fallback: Get user ID and call update_user_analytics directly
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user?.id) {
+      return {
+        success: false,
+        message: 'Not authenticated',
+      };
+    }
+
+    const { error: updateError } = await supabase.rpc('update_user_analytics', {
+      p_user_id: userData.user.id,
+    });
+
+    if (!updateError) {
+      return {
+        success: true,
+        message: 'Analytics updated successfully',
+      };
+    }
+
+    console.error('Error updating analytics:', updateError);
+    return {
+      success: false,
+      message: 'Failed to update analytics',
+    };
+  } catch (error) {
+    console.error('Error in refreshMyAnalytics:', error);
+    return {
+      success: false,
+      message: 'Error refreshing analytics',
+    };
   }
 };
 

@@ -9,6 +9,7 @@ import {
   getFinancialHealthInterpretation,
   getSavingsRateInterpretation,
 } from './financialAnalyticsService';
+import { addThousandSeparators } from '../utils/helpers';
 
 export interface ParseTransactionRequest {
   message: string;
@@ -315,7 +316,8 @@ export function parseTransactionFallback(
 export async function chatWithGemini(
   message: string,
   conversationHistory: ChatMessage[] = [],
-  userPersonalization?: UserPersonalization
+  userPersonalization?: UserPersonalization,
+  financialContext?: string
 ): Promise<ChatWithGeminiResponse> {
   try {
     // Call Supabase Edge Function
@@ -334,19 +336,40 @@ export async function chatWithGemini(
           financial_concerns: userPersonalization.financial_concerns,
           income_level: userPersonalization.income_level,
           family_situation: userPersonalization.family_situation,
-        } : undefined
+        } : undefined,
+        financialContext: financialContext
       }
     });
 
     if (error) {
-      console.error('Edge Function error:', error);
+      console.error('❌ Edge Function error:', error);
+      console.error('❌ Error details:', JSON.stringify(error, null, 2));
       return {
         success: false,
         error: error.message || 'Failed to get AI response'
       };
     }
 
-    if (!data || !data.reply) {
+    if (!data) {
+      console.error('❌ No data received from edge function');
+      return {
+        success: false,
+        error: 'No response from AI service'
+      };
+    }
+
+    if (!data.success) {
+      console.error('❌ Edge function returned error:', data.error);
+      console.error('❌ Error type:', data.errorType);
+      console.error('❌ Error details:', data.details);
+      return {
+        success: false,
+        error: data.error || 'AI service error'
+      };
+    }
+
+    if (!data.reply) {
+      console.error('❌ No reply in response:', JSON.stringify(data));
       return {
         success: false,
         error: 'No reply received from AI'
@@ -507,15 +530,15 @@ Nếu bạn đã có nhiều giao dịch nhưng vẫn thấy thông báo này, h
 Bạn là một cố vấn tài chính cá nhân thông minh. Hãy cung cấp lời khuyên tài chính dựa trên dữ liệu thực tế của người dùng.
 
 TÌNH HÌNH TÀI CHÍNH HIỆN TẠI:
-• Số dư hiện tại: ${context.current_balance.toLocaleString()} VND
-• Thu nhập tháng này: ${context.total_income_mtd.toLocaleString()} VND
-• Chi tiêu tháng này: ${context.total_expense_mtd.toLocaleString()} VND
+• Số dư hiện tại: ${addThousandSeparators(Math.round(context.current_balance), ',')} VND
+• Thu nhập tháng này: ${addThousandSeparators(Math.round(context.total_income_mtd), ',')} VND
+• Chi tiêu tháng này: ${addThousandSeparators(Math.round(context.total_expense_mtd), ',')} VND
 • Tỷ lệ tiết kiệm: ${context.savings_rate_current.toFixed(1)}% (${savingsInterp.level})
 • Điểm sức khỏe tài chính: ${context.financial_health_score}/100 (${healthInterp.level})
 
 TRUNG BÌNH 3 THÁNG GẦN NHẤT:
-• Thu nhập TB: ${context.avg_monthly_income.toLocaleString()} VND
-• Chi tiêu TB: ${context.avg_monthly_expense.toLocaleString()} VND
+• Thu nhập TB: ${addThousandSeparators(Math.round(context.avg_monthly_income), ',')} VND
+• Chi tiêu TB: ${addThousandSeparators(Math.round(context.avg_monthly_expense), ',')} VND
 • Tỷ lệ tiết kiệm TB: ${context.avg_savings_rate.toFixed(1)}%
 
 TÌNH TRẠNG NGÂN SÁCH:
@@ -533,7 +556,7 @@ QUỸ DỰ PHÒNG:
 
 TOP DANH MỤC CHI TIÊU:
 ${context.top_spending_categories.slice(0, 5).map((cat, i) =>
-  `${i + 1}. ${cat.category}: ${cat.amount.toLocaleString()} VND (${cat.percentage.toFixed(1)}%)`
+  `${i + 1}. ${cat.category}: ${addThousandSeparators(Math.round(cat.amount), ',')} VND (${cat.percentage.toFixed(1)}%)`
 ).join('\n')}
 
 ${insights.length > 0 ? `
@@ -546,7 +569,7 @@ ${insights.slice(0, 3).map(insight =>
 ${last3Months.length >= 2 ? `
 LỊCH SỬ 3 THÁNG:
 ${last3Months.map(m =>
-  `• Tháng ${m.month}/${m.year}: Thu ${m.total_income.toLocaleString()} | Chi ${m.total_expense.toLocaleString()} | Tiết kiệm ${m.savings_rate.toFixed(1)}%`
+  `• Tháng ${m.month}/${m.year}: Thu ${addThousandSeparators(Math.round(m.total_income), ',')} | Chi ${addThousandSeparators(Math.round(m.total_expense), ',')} | Tiết kiệm ${m.savings_rate.toFixed(1)}%`
 ).join('\n')}
 ` : ''}
 
@@ -575,11 +598,16 @@ TRÁNH:
 - Sử dụng thuật ngữ phức tạp nếu người dùng là người mới bắt đầu
 `;
 
-    // Call Gemini for intelligent response
-    const response = await chatWithGemini(question, [], {
-      ...userPersonalization,
-      has_completed_personalization: userPersonalization?.has_completed_personalization || false,
-    });
+    // Call Gemini for intelligent response with comprehensive financial context
+    const response = await chatWithGemini(
+      question,
+      [],
+      {
+        ...userPersonalization,
+        has_completed_personalization: userPersonalization?.has_completed_personalization || false,
+      },
+      systemPrompt // Pass the comprehensive financial data to the AI
+    );
 
     if (!response.success || !response.reply) {
       // Fallback to basic summary if AI fails
@@ -607,9 +635,9 @@ function generateBasicFinancialSummary(
   summary += `${healthInterp.description}\n\n`;
 
   summary += `**Tình Hình Hiện Tại:**\n`;
-  summary += `• Số dư: ${context.current_balance.toLocaleString()} VND\n`;
-  summary += `• Thu nhập tháng này: ${context.total_income_mtd.toLocaleString()} VND\n`;
-  summary += `• Chi tiêu tháng này: ${context.total_expense_mtd.toLocaleString()} VND\n`;
+  summary += `• Số dư: ${addThousandSeparators(Math.round(context.current_balance), ',')} VND\n`;
+  summary += `• Thu nhập tháng này: ${addThousandSeparators(Math.round(context.total_income_mtd), ',')} VND\n`;
+  summary += `• Chi tiêu tháng này: ${addThousandSeparators(Math.round(context.total_expense_mtd), ',')} VND\n`;
   summary += `• Tỷ lệ tiết kiệm: ${context.savings_rate_current.toFixed(1)}% (${savingsInterp.level})\n\n`;
 
   if (context.budgets_exceeded > 0) {

@@ -27,6 +27,7 @@ interface ChatRequest {
   message: string;
   conversationHistory?: Message[];
   userPersonalization?: UserPersonalization;
+  financialContext?: string;
 }
 
 // Build personalized system context based on user preferences
@@ -221,13 +222,21 @@ serve(async (req) => {
   }
 
   try {
-    const { message, conversationHistory = [], userPersonalization }: ChatRequest = await req.json();
+    const requestBody = await req.json();
+    console.log('📥 Request received, body keys:', Object.keys(requestBody));
+
+    const { message, conversationHistory = [], userPersonalization, financialContext }: ChatRequest = requestBody;
 
     if (!message) {
       return new Response(
         JSON.stringify({ success: false, error: 'Message is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    console.log('📊 Has financial context:', !!financialContext);
+    if (financialContext) {
+      console.log('📏 Financial context length:', financialContext.length, 'characters');
     }
 
     // Get Google Gemini API key
@@ -246,7 +255,12 @@ serve(async (req) => {
     // Build conversation parts for Gemini
     const conversationParts = [];
 
-    // Add system context
+    // Add financial context first (if provided - for financial advice)
+    if (financialContext) {
+      conversationParts.push({ text: financialContext });
+    }
+
+    // Add system context (personalization, communication style, etc.)
     conversationParts.push({ text: systemContext });
 
     // Add conversation history (last 10 messages for context)
@@ -262,35 +276,61 @@ serve(async (req) => {
     conversationParts.push({ text: 'Trợ lý:' });
 
     // Call Google Gemini API
-    const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: conversationParts
-          }],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 200,
-          }
-        }),
-      }
-    );
+    console.log('🤖 Calling Gemini API...');
+    console.log('📦 Conversation parts count:', conversationParts.length);
+
+    let geminiResponse;
+    try {
+      geminiResponse = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [{
+              parts: conversationParts
+            }],
+            generationConfig: {
+              temperature: 0.7,
+              maxOutputTokens: financialContext ? 800 : 200, // More tokens for financial advice
+            }
+          }),
+        }
+      );
+    } catch (fetchError) {
+      console.error('❌ Fetch error:', fetchError);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Failed to reach Gemini API: ' + fetchError.message }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     if (!geminiResponse.ok) {
       const errorText = await geminiResponse.text();
-      console.error('Gemini API error:', errorText);
+      console.error('❌ Gemini API error status:', geminiResponse.status);
+      console.error('❌ Gemini API error body:', errorText);
       return new Response(
-        JSON.stringify({ success: false, error: 'AI chat failed' }),
+        JSON.stringify({
+          success: false,
+          error: `Gemini API error (${geminiResponse.status}): ${errorText.substring(0, 200)}`
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     const geminiData = await geminiResponse.json();
+    console.log('✅ Gemini response received');
+
+    if (!geminiData.candidates || !geminiData.candidates[0] || !geminiData.candidates[0].content) {
+      console.error('❌ Invalid Gemini response structure:', JSON.stringify(geminiData));
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid AI response structure' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const aiReply = geminiData.candidates[0].content.parts[0].text;
 
     return new Response(
@@ -302,11 +342,17 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Edge function error:', error);
+    console.error('❌ Edge function error:', error);
+    console.error('❌ Error name:', error.name);
+    console.error('❌ Error message:', error.message);
+    console.error('❌ Error stack:', error.stack);
+
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message || 'Internal server error'
+        error: error.message || 'Internal server error',
+        errorType: error.name,
+        details: error.stack?.split('\n')[0]
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

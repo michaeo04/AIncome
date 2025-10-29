@@ -3,20 +3,66 @@
 import { format, parseISO, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns';
 
 /**
- * Format currency based on locale
+ * Add thousand separators to a number
+ * @param num - The number to format
+ * @param separator - The separator to use (default: comma)
+ * @returns Formatted string with thousand separators
  */
-export const formatCurrency = (amount: number, currency: string = 'VND'): string => {
-  if (currency === 'VND') {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-    }).format(amount);
+export const addThousandSeparators = (num: number, separator: string = ','): string => {
+  // Handle negative numbers
+  const isNegative = num < 0;
+  const absNum = Math.abs(num);
+
+  // Split into integer and decimal parts
+  const parts = absNum.toFixed(2).split('.');
+  const integerPart = parts[0];
+  const decimalPart = parts[1];
+
+  // Add thousand separators to integer part
+  const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, separator);
+
+  // Combine parts
+  let result = formattedInteger;
+  if (decimalPart && decimalPart !== '00') {
+    result += '.' + decimalPart;
   }
 
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-  }).format(amount);
+  return isNegative ? '-' + result : result;
+};
+
+/**
+ * Format currency with thousand separators
+ * @param amount - The amount to format
+ * @param currency - The currency code (default: VND)
+ * @returns Formatted currency string
+ */
+export const formatCurrency = (amount: number, currency: string = 'VND'): string => {
+  const formattedAmount = addThousandSeparators(amount, ',');
+
+  // Currency symbols and formats
+  const currencySymbols: Record<string, { symbol: string; position: 'prefix' | 'suffix' }> = {
+    'VND': { symbol: '₫', position: 'suffix' },
+    'USD': { symbol: '$', position: 'prefix' },
+    'EUR': { symbol: '€', position: 'prefix' },
+    'GBP': { symbol: '£', position: 'prefix' },
+    'JPY': { symbol: '¥', position: 'prefix' },
+    'CNY': { symbol: '¥', position: 'prefix' },
+    'KRW': { symbol: '₩', position: 'prefix' },
+    'THB': { symbol: '฿', position: 'prefix' },
+  };
+
+  const currencyConfig = currencySymbols[currency] || { symbol: currency, position: 'prefix' };
+
+  // For VND, remove decimal places
+  const displayAmount = currency === 'VND'
+    ? addThousandSeparators(Math.round(amount), ',')
+    : formattedAmount;
+
+  if (currencyConfig.position === 'suffix') {
+    return `${displayAmount} ${currencyConfig.symbol}`;
+  } else {
+    return `${currencyConfig.symbol}${displayAmount}`;
+  }
 };
 
 /**

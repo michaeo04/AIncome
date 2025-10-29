@@ -35,6 +35,7 @@ export type MainTabParamList = {
 // Home Stack Navigator
 export type HomeStackParamList = {
   Home: undefined;
+  AllTransactions: undefined;
   TransactionDetail: { transactionId: string };
   AddTransaction: { transactionId?: string };
 };

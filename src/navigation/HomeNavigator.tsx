@@ -6,6 +6,7 @@ import { HomeStackParamList } from './types';
 import HomeScreen from '../screens/home/HomeScreen';
 import AddTransactionScreen from '../screens/home/AddTransactionScreen';
 import TransactionDetailScreen from '../screens/home/TransactionDetailScreen';
+import AllTransactionsScreen from '../screens/home/AllTransactionsScreen';
 
 const Stack = createStackNavigator<HomeStackParamList>();
 
@@ -15,6 +16,11 @@ const HomeNavigator: React.FC = () => {
       <Stack.Screen
         name="Home"
         component={HomeScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="AllTransactions"
+        component={AllTransactionsScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen
