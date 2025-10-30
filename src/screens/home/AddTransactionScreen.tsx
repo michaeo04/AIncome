@@ -28,6 +28,7 @@ import {
   validateTransactionAmount,
   validateTransactionDate,
   validateExpenseAgainstBalance,
+  validateExpenseAgainstGoals,
   validateLargeTransaction,
   checkDuplicateTransaction,
   validateTransactionNote,
@@ -320,6 +321,24 @@ const AddTransactionScreen: React.FC = () => {
           );
           return;
         }
+
+        // Check if expense affects saving goals
+        const goalValidation = await validateExpenseAgainstGoals(
+          user.id,
+          amountNum,
+          isEditMode,
+          originalAmount
+        );
+
+        if (!goalValidation.isValid) {
+          setIsLoading(false);
+          showValidationAlert(
+            goalValidation,
+            () => proceedWithSave(), // Continue
+            () => setIsLoading(false) // Cancel
+          );
+          return;
+        }
       }
 
       // Check for large transactions
@@ -432,7 +451,8 @@ const AddTransactionScreen: React.FC = () => {
 
   // Handle transaction saved from chat
   const handleTransactionSaved = () => {
-    navigation.goBack();
+    // User stays in chat conversation after saving transaction
+    // No navigation - they can continue chatting or add more transactions
   };
 
   // Clear chat when leaving screen

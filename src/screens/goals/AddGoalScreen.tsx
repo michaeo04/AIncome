@@ -18,6 +18,7 @@ import { GoalsStackParamList } from '../../navigation/types';
 import { supabase } from '../../services/supabase';
 import { useAuthStore } from '../../stores/authStore';
 import { formatCurrency } from '../../utils/helpers';
+import { validateGoalAgainstBalance, showValidationAlert } from '../../utils/validation';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { differenceInMonths, addMonths } from 'date-fns';
 
@@ -138,6 +139,29 @@ const AddGoalScreen: React.FC = () => {
 
   const handleSave = async () => {
     if (!validateForm() || !user) return;
+
+    // Validate goal against balance
+    const balanceValidation = await validateGoalAgainstBalance(
+      user.id,
+      Number(targetAmount),
+      isEditMode ? goalId : undefined
+    );
+
+    if (!balanceValidation.isValid) {
+      showValidationAlert(
+        balanceValidation,
+        () => proceedWithSave(), // Continue anyway
+        undefined // Cancel
+      );
+      return;
+    }
+
+    // If validation passes, proceed with save
+    await proceedWithSave();
+  };
+
+  const proceedWithSave = async () => {
+    if (!user) return;
 
     setIsLoading(true);
     try {

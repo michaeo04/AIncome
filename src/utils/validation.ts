@@ -487,12 +487,167 @@ export const validateGoalAchievability = async (
   }
 };
 
+/**
+ * Rule 15: Sum of saving goals must be less than balance
+ * Goals are part of the balance (not separate from it)
+ */
+export const validateGoalAgainstBalance = async (
+  userId: string,
+  newGoalAmount: number,
+  goalId?: string
+): Promise<ValidationResult> => {
+  try {
+    // Calculate current balance
+    const { data: transactions, error: txError } = await supabase
+      .from('transactions')
+      .select('type, amount')
+      .eq('user_id', userId);
+
+    if (txError) throw txError;
+
+    const totalIncome = transactions
+      ?.filter((t) => t.type === 'income')
+      .reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+
+    const totalExpense = transactions
+      ?.filter((t) => t.type === 'expense')
+      .reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+
+    const currentBalance = totalIncome - totalExpense;
+
+    // Get all active goals
+    let goalsQuery = supabase
+      .from('saving_goals')
+      .select('target_amount')
+      .eq('user_id', userId)
+      .eq('status', 'active');
+
+    // Exclude current goal if editing
+    if (goalId) {
+      goalsQuery = goalsQuery.neq('id', goalId);
+    }
+
+    const { data: goals, error: goalsError } = await goalsQuery;
+
+    if (goalsError) throw goalsError;
+
+    const totalExistingGoals = goals
+      ?.reduce((sum, g) => sum + Number(g.target_amount), 0) || 0;
+
+    const totalGoalsWithNew = totalExistingGoals + newGoalAmount;
+
+    // Check if total goals exceed balance
+    if (totalGoalsWithNew > currentBalance) {
+      return {
+        isValid: false,
+        title: '⚠️ Goals Exceed Balance',
+        message: `The sum of your saving goals (${formatAmount(totalGoalsWithNew)}) would exceed your current balance (${formatAmount(currentBalance)}).\n\nSaving goals are part of your balance, not separate from it. Please reduce the goal amount or increase your balance first.`,
+      };
+    }
+
+    // Warning if goals would use more than 90% of balance
+    if (totalGoalsWithNew > currentBalance * 0.9 && currentBalance > 0) {
+      return {
+        isValid: false,
+        title: '⚠️ High Goal Allocation',
+        message: `Your total saving goals (${formatAmount(totalGoalsWithNew)}) would use ${Math.round((totalGoalsWithNew / currentBalance) * 100)}% of your balance (${formatAmount(currentBalance)}).\n\nThis leaves very little room for spending. Are you sure you want to continue?`,
+      };
+    }
+
+    return { isValid: true };
+  } catch (error) {
+    console.error('Error validating goal against balance:', error);
+    return { isValid: true };
+  }
+};
+
+/**
+ * Rule 16: Warn if expense would reduce available balance below goal commitments
+ * Available Balance = Current Balance - Total Active Goals
+ */
+export const validateExpenseAgainstGoals = async (
+  userId: string,
+  expenseAmount: number,
+  isEdit: boolean = false,
+  originalAmount?: number
+): Promise<ValidationResult> => {
+  try {
+    // Calculate current balance
+    const { data: transactions, error: txError } = await supabase
+      .from('transactions')
+      .select('type, amount')
+      .eq('user_id', userId);
+
+    if (txError) throw txError;
+
+    const totalIncome = transactions
+      ?.filter((t) => t.type === 'income')
+      .reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+
+    const totalExpense = transactions
+      ?.filter((t) => t.type === 'expense')
+      .reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+
+    let currentBalance = totalIncome - totalExpense;
+
+    // If editing, add back the original amount
+    if (isEdit && originalAmount) {
+      currentBalance += originalAmount;
+    }
+
+    // Get all active goals
+    const { data: goals, error: goalsError } = await supabase
+      .from('saving_goals')
+      .select('target_amount')
+      .eq('user_id', userId)
+      .eq('status', 'active');
+
+    if (goalsError) throw goalsError;
+
+    const totalGoals = goals
+      ?.reduce((sum, g) => sum + Number(g.target_amount), 0) || 0;
+
+    // If no active goals, no need to check
+    if (totalGoals === 0) {
+      return { isValid: true };
+    }
+
+    const availableBalance = currentBalance - totalGoals;
+    const balanceAfterExpense = currentBalance - expenseAmount;
+
+    // Warn if spending would eat into goal reserves
+    if (balanceAfterExpense < totalGoals) {
+      const deficit = totalGoals - balanceAfterExpense;
+
+      return {
+        isValid: false,
+        title: '⚠️ Spending Into Goal Reserves',
+        message: `This expense (${formatAmount(expenseAmount)}) would reduce your balance below your goal commitments.\n\nCurrent Balance: ${formatAmount(currentBalance)}\nTotal Goal Commitments: ${formatAmount(totalGoals)}\nAvailable to Spend: ${formatAmount(availableBalance)}\n\nAfter this expense, you'd be ${formatAmount(deficit)} short of your goals. You can continue, but your goals may become harder to achieve.`,
+      };
+    }
+
+    // Warning if available balance would be less than 20% of goals
+    if (balanceAfterExpense < totalGoals * 1.2 && availableBalance > 0) {
+      return {
+        isValid: false,
+        title: '⚠️ Low Available Balance',
+        message: `After this expense, you'll have ${formatAmount(balanceAfterExpense)} remaining.\n\nWith goal commitments of ${formatAmount(totalGoals)}, this leaves little cushion. Consider if this expense is necessary.`,
+      };
+    }
+
+    return { isValid: true };
+  } catch (error) {
+    console.error('Error validating expense against goals:', error);
+    return { isValid: true };
+  }
+};
+
 // ============================================
 // CATEGORY VALIDATION RULES
 // ============================================
 
 /**
- * Rule 15: Category name must be unique for user
+ * Rule 17: Category name must be unique for user
  */
 export const validateCategoryName = async (
   userId: string,
@@ -548,7 +703,7 @@ export const validateCategoryName = async (
 };
 
 /**
- * Rule 16: Cannot delete category with transactions
+ * Rule 18: Cannot delete category with transactions
  */
 export const validateCategoryDeletion = async (
   userId: string,

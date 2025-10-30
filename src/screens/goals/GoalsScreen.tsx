@@ -44,6 +44,7 @@ const GoalsScreen: React.FC = () => {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [currency, setCurrency] = useState('VND');
   const [netBalance, setNetBalance] = useState(0);
+  const [totalGoalCommitments, setTotalGoalCommitments] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -186,6 +187,12 @@ const GoalsScreen: React.FC = () => {
         );
 
         setGoals(goalsWithProgress);
+
+        // Calculate total goal commitments (only active goals)
+        const totalCommitments = goalsWithProgress
+          .filter((g) => g.status === 'active')
+          .reduce((sum, g) => sum + Number(g.target_amount), 0);
+        setTotalGoalCommitments(totalCommitments);
       }
     } catch (error: any) {
       console.error('Error fetching goals:', error);
@@ -222,15 +229,33 @@ const GoalsScreen: React.FC = () => {
     );
   }
 
+  const availableBalance = netBalance - totalGoalCommitments;
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <View>
+        <View style={styles.headerInfo}>
           <Text style={styles.headerTitle}>Saving Goals</Text>
           <Text style={styles.headerSubtitle}>
             Net Balance: {formatCurrency(netBalance, currency)}
           </Text>
+          {totalGoalCommitments > 0 && (
+            <View style={styles.balanceBreakdown}>
+              <Text style={styles.balanceBreakdownText}>
+                Goal Commitments: {formatCurrency(totalGoalCommitments, currency)}
+              </Text>
+              <Text
+                style={[
+                  styles.balanceBreakdownText,
+                  styles.availableBalance,
+                  { color: availableBalance < 0 ? '#EF4444' : '#10B981' },
+                ]}
+              >
+                Available: {formatCurrency(availableBalance, currency)}
+              </Text>
+            </View>
+          )}
         </View>
         <TouchableOpacity style={styles.addButton} onPress={handleAddGoal}>
           <Text style={styles.addButtonText}>+ Add Goal</Text>
@@ -404,11 +429,15 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     padding: 16,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
+  },
+  headerInfo: {
+    flex: 1,
+    marginRight: 12,
   },
   headerTitle: {
     fontSize: 24,
@@ -419,6 +448,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
     marginTop: 4,
+  },
+  balanceBreakdown: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  balanceBreakdownText: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  availableBalance: {
+    fontWeight: '600',
+    fontSize: 13,
   },
   addButton: {
     backgroundColor: '#3B82F6',
