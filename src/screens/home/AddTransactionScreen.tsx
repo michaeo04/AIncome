@@ -52,12 +52,13 @@ const AddTransactionScreen: React.FC = () => {
   const { clearChat } = useChatStore();
 
   const transactionId = route.params?.transactionId;
+  const initialType = route.params?.initialType;
   const isEditMode = !!transactionId;
 
   // Tab state
   const [activeTab, setActiveTab] = useState<'form' | 'chat'>('form');
 
-  const [type, setType] = useState<'income' | 'expense'>('expense');
+  const [type, setType] = useState<'income' | 'expense'>(initialType || 'expense');
   const [amount, setAmount] = useState('');
   const [name, setName] = useState(''); // Transaction name/title
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);

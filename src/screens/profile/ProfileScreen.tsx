@@ -14,11 +14,13 @@ import {
   Alert,
   Linking,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { ProfileStackParamList } from '../../navigation/types';
 import { useAuthStore } from '../../stores/authStore';
 import { supabase } from '../../services/supabase';
+import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT, SHADOWS } from '../../theme/modernTheme';
 
 type ProfileScreenNavigationProp = StackNavigationProp<
   ProfileStackParamList,
@@ -127,10 +129,23 @@ const ProfileScreen: React.FC = () => {
           <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Profile</Text>
-        </View>
+        {/* Modern Header with Gradient */}
+        <LinearGradient
+          colors={['#FFFFFF', '#F9FAFB']}
+          style={styles.headerGradient}
+        >
+          <View style={styles.header}>
+            <View style={styles.headerLeft}>
+              <View style={styles.iconContainer}>
+                <Text style={styles.headerIcon}>👤</Text>
+              </View>
+              <View style={styles.headerTextContainer}>
+                <Text style={styles.headerTitle}>Profile & Settings</Text>
+                <Text style={styles.headerSubtitle}>Manage your account</Text>
+              </View>
+            </View>
+          </View>
+        </LinearGradient>
 
         {/* User Info Card */}
         <TouchableOpacity
@@ -290,23 +305,57 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   scrollContent: {
-    padding: 16,
     paddingBottom: 40,
   },
+  headerGradient: {
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.lg,
+    paddingHorizontal: SPACING.lg,
+    marginBottom: SPACING.lg,
+    ...SHADOWS.md,
+  },
   header: {
-    marginBottom: 24,
-    paddingTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  iconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: BORDER_RADIUS.xl,
+    backgroundColor: COLORS.secondaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SPACING.md,
+    ...SHADOWS.sm,
+  },
+  headerIcon: {
+    fontSize: 28,
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1F2937',
+    fontSize: FONT_SIZE.xxxl,
+    fontWeight: FONT_WEIGHT.extrabold,
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.xs,
+  },
+  headerSubtitle: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    fontWeight: FONT_WEIGHT.medium,
   },
   userCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
+    marginHorizontal: 16,
     marginBottom: 24,
     elevation: 2,
     shadowColor: '#000',
@@ -392,6 +441,7 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: 24,
+    marginHorizontal: 16,
   },
   sectionTitle: {
     fontSize: 14,

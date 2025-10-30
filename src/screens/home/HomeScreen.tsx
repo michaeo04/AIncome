@@ -44,6 +44,47 @@ const HomeScreen: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [currency, setCurrency] = useState('VND');
 
+  // Get dynamic greeting based on time of day
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    const username = user?.email?.split('@')[0] || 'there';
+
+    let timeGreeting = '';
+    let emoji = '';
+
+    if (hour < 12) {
+      timeGreeting = 'Good morning';
+      emoji = '☀️';
+    } else if (hour < 17) {
+      timeGreeting = 'Good afternoon';
+      emoji = '🌤️';
+    } else if (hour < 21) {
+      timeGreeting = 'Good evening';
+      emoji = '🌆';
+    } else {
+      timeGreeting = 'Good night';
+      emoji = '🌙';
+    }
+
+    return { timeGreeting, emoji, username };
+  };
+
+  const getMotivationalMessage = () => {
+    const messages = [
+      'Take control of your finances today',
+      'Every penny counts towards your goals',
+      'Building wealth, one transaction at a time',
+      'Your financial journey starts here',
+      'Track smart, spend wise, save more',
+      'Making your money work for you',
+      'Small steps lead to big savings',
+    ];
+
+    // Use date as seed for consistent daily message
+    const dayOfYear = Math.floor((new Date().getTime() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
+    return messages[dayOfYear % messages.length];
+  };
+
   // Fetch user currency
   const fetchUserCurrency = async () => {
     if (!user) return;
@@ -164,6 +205,16 @@ const HomeScreen: React.FC = () => {
     navigation.navigate('AddTransaction', {});
   };
 
+  // Navigate to add income
+  const handleAddIncome = () => {
+    navigation.navigate('AddTransaction', { initialType: 'income' });
+  };
+
+  // Navigate to add expense
+  const handleAddExpense = () => {
+    navigation.navigate('AddTransaction', { initialType: 'expense' });
+  };
+
   // Navigate to transaction detail
   const handleTransactionPress = (transactionId: string) => {
     navigation.navigate('TransactionDetail', { transactionId });
@@ -194,8 +245,10 @@ const HomeScreen: React.FC = () => {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.greeting}>Hello, {user?.email?.split('@')[0]}! 👋</Text>
-          <Text style={styles.subtitle}>Here's your financial overview</Text>
+          <Text style={styles.greeting}>
+            {getGreeting().timeGreeting}, {getGreeting().username}! {getGreeting().emoji}
+          </Text>
+          <Text style={styles.subtitle}>{getMotivationalMessage()}</Text>
         </View>
 
         {/* Balance Card with Gradient */}
@@ -261,7 +314,7 @@ const HomeScreen: React.FC = () => {
           <View style={styles.quickActionsGrid}>
             <TouchableOpacity
               style={styles.quickActionCard}
-              onPress={handleAddTransaction}
+              onPress={handleAddExpense}
             >
               <View style={[styles.quickActionIcon, { backgroundColor: COLORS.primary + '20' }]}>
                 <Text style={styles.quickActionIconText}>💸</Text>
@@ -271,7 +324,7 @@ const HomeScreen: React.FC = () => {
 
             <TouchableOpacity
               style={styles.quickActionCard}
-              onPress={handleAddTransaction}
+              onPress={handleAddIncome}
             >
               <View style={[styles.quickActionIcon, { backgroundColor: COLORS.success + '20' }]}>
                 <Text style={styles.quickActionIconText}>💰</Text>

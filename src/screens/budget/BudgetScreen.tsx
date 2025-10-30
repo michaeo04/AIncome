@@ -209,13 +209,35 @@ const BudgetScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Budgets</Text>
-        <TouchableOpacity onPress={handleAddBudget}>
-          <Text style={styles.addButton}>+ Add</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Modern Header with Gradient */}
+      <LinearGradient
+        colors={['#FFFFFF', '#F9FAFB']}
+        style={styles.headerGradient}
+      >
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <View style={styles.iconContainer}>
+              <Text style={styles.headerIcon}>💳</Text>
+            </View>
+            <View style={styles.headerTextContainer}>
+              <Text style={styles.headerTitle}>Budgets</Text>
+              <Text style={styles.headerSubtitle}>
+                {budgets.length} {budgets.length === 1 ? 'budget' : 'budgets'} active
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity style={styles.addButton} onPress={handleAddBudget}>
+            <LinearGradient
+              colors={[COLORS.primary, COLORS.primaryDark]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.addButtonGradient}
+            >
+              <Text style={styles.addButtonText}>+</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -357,24 +379,67 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6B7280',
   },
+  headerGradient: {
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.lg,
+    ...SHADOWS.md,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    paddingHorizontal: SPACING.lg,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  iconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: BORDER_RADIUS.xl,
+    backgroundColor: COLORS.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SPACING.md,
+    ...SHADOWS.sm,
+  },
+  headerIcon: {
+    fontSize: 28,
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1F2937',
+    fontSize: FONT_SIZE.xxxl,
+    fontWeight: FONT_WEIGHT.extrabold,
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.xs,
+  },
+  headerSubtitle: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    fontWeight: FONT_WEIGHT.medium,
   },
   addButton: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#3B82F6',
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  addButtonGradient: {
+    width: 48,
+    height: 48,
+    borderRadius: BORDER_RADIUS.round,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addButtonText: {
+    fontSize: 28,
+    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.textWhite,
   },
   scrollContent: {
     padding: 16,

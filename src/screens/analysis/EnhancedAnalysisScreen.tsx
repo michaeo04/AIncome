@@ -15,11 +15,13 @@ import {
   Modal,
   FlatList,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { BarChart, PieChart, LineChart, ProgressChart } from 'react-native-chart-kit';
 import { supabase } from '../../services/supabase';
 import { useAuthStore } from '../../stores/authStore';
 import { formatCurrency } from '../../utils/helpers';
+import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT, SHADOWS } from '../../theme/modernTheme';
 import {
   startOfDay,
   endOfDay,
@@ -533,11 +535,30 @@ const EnhancedAnalysisScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Analysis & Insights</Text>
-        <Text style={styles.headerSubtitle}>Financial Overview</Text>
-      </View>
+      {/* Enhanced Header with Gradient */}
+      <LinearGradient
+        colors={['#FFFFFF', '#F9FAFB']}
+        style={styles.headerGradient}
+      >
+        <View style={styles.headerContent}>
+          <View style={styles.headerLeft}>
+            <View style={styles.iconContainer}>
+              <Text style={styles.headerIcon}>📊</Text>
+            </View>
+            <View style={styles.headerTextContainer}>
+              <Text style={styles.headerTitle}>Analysis & Insights</Text>
+              <Text style={styles.headerSubtitle}>
+                {selectedFilter === 'day' && '📅 Today\'s Overview'}
+                {selectedFilter === 'week' && '📆 This Week'}
+                {selectedFilter === 'month' && '🗓️ This Month'}
+                {selectedFilter === 'quarter' && '📊 Quarterly Report'}
+                {selectedFilter === 'year' && '📈 Yearly Analysis'}
+                {selectedFilter === 'all' && '🌐 All-Time Data'}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </LinearGradient>
 
       {/* Time Filter Chips */}
       <ScrollView
@@ -957,53 +978,91 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6B7280',
   },
-  header: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
-    backgroundColor: '#FFFFFF',
+  headerGradient: {
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.lg,
+    ...SHADOWS.md,
+  },
+  headerContent: {
+    paddingHorizontal: SPACING.lg,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: BORDER_RADIUS.xl,
+    backgroundColor: COLORS.successLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SPACING.md,
+    ...SHADOWS.sm,
+  },
+  headerIcon: {
+    fontSize: 28,
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   headerTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: FONT_SIZE.xxxl,
+    fontWeight: FONT_WEIGHT.extrabold,
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.xs,
   },
   headerSubtitle: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 2,
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    fontWeight: FONT_WEIGHT.medium,
   },
   filterContainer: {
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
-    maxHeight: 50,
+    paddingVertical: 8,
   },
   filterContent: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
     alignItems: 'center',
   },
   filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    marginHorizontal: 2,
-    borderRadius: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    marginHorizontal: 6,
+    borderRadius: 16,
     backgroundColor: '#F3F4F6',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    minWidth: 80,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   filterChipActive: {
     backgroundColor: '#3B82F6',
+    borderColor: '#3B82F6',
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+    transform: [{ scale: 1.05 }],
   },
   filterEmoji: {
-    fontSize: 12,
-    marginRight: 3,
+    fontSize: 18,
+    marginRight: 6,
   },
   filterLabel: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
     color: '#6B7280',
     includeFontPadding: false,
     textAlignVertical: 'center',

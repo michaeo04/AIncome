@@ -11,12 +11,14 @@ import {
   ActivityIndicator,
   SafeAreaView,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { GoalsStackParamList } from '../../navigation/types';
 import { supabase } from '../../services/supabase';
 import { useAuthStore } from '../../stores/authStore';
 import { formatCurrency, formatDate } from '../../utils/helpers';
+import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT, SHADOWS } from '../../theme/modernTheme';
 import { differenceInDays, differenceInMonths } from 'date-fns';
 
 type GoalsScreenNavigationProp = StackNavigationProp<GoalsStackParamList, 'Goals'>;
@@ -233,34 +235,60 @@ const GoalsScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerInfo}>
-          <Text style={styles.headerTitle}>Saving Goals</Text>
-          <Text style={styles.headerSubtitle}>
-            Net Balance: {formatCurrency(netBalance, currency)}
-          </Text>
-          {totalGoalCommitments > 0 && (
-            <View style={styles.balanceBreakdown}>
-              <Text style={styles.balanceBreakdownText}>
-                Goal Commitments: {formatCurrency(totalGoalCommitments, currency)}
-              </Text>
-              <Text
-                style={[
-                  styles.balanceBreakdownText,
-                  styles.availableBalance,
-                  { color: availableBalance < 0 ? '#EF4444' : '#10B981' },
-                ]}
+      {/* Enhanced Header with Gradient */}
+      <LinearGradient
+        colors={['#FFFFFF', '#F9FAFB']}
+        style={styles.headerGradient}
+      >
+        <View style={styles.header}>
+          <View style={styles.headerTop}>
+            <View style={styles.headerLeft}>
+              <View style={styles.iconContainer}>
+                <Text style={styles.headerIcon}>🎯</Text>
+              </View>
+              <View style={styles.headerTextContainer}>
+                <Text style={styles.headerTitle}>Saving Goals</Text>
+                <Text style={styles.headerSubtitle}>
+                  {goals.length} {goals.length === 1 ? 'goal' : 'goals'} • Net: {formatCurrency(netBalance, currency)}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity style={styles.addButton} onPress={handleAddGoal}>
+              <LinearGradient
+                colors={[COLORS.warning, '#F59E0B']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.addButtonGradient}
               >
-                Available: {formatCurrency(availableBalance, currency)}
-              </Text>
+                <Text style={styles.addButtonText}>+</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+
+          {totalGoalCommitments > 0 && (
+            <View style={styles.balanceCard}>
+              <View style={styles.balanceRow}>
+                <View style={styles.balanceItem}>
+                  <Text style={styles.balanceLabel}>💰 Committed</Text>
+                  <Text style={styles.balanceValue}>
+                    {formatCurrency(totalGoalCommitments, currency)}
+                  </Text>
+                </View>
+                <View style={styles.balanceDivider} />
+                <View style={styles.balanceItem}>
+                  <Text style={styles.balanceLabel}>✨ Available</Text>
+                  <Text style={[
+                    styles.balanceValue,
+                    { color: availableBalance < 0 ? COLORS.danger : COLORS.success }
+                  ]}>
+                    {formatCurrency(availableBalance, currency)}
+                  </Text>
+                </View>
+              </View>
             </View>
           )}
         </View>
-        <TouchableOpacity style={styles.addButton} onPress={handleAddGoal}>
-          <Text style={styles.addButtonText}>+ Add Goal</Text>
-        </TouchableOpacity>
-      </View>
+      </LinearGradient>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -426,54 +454,100 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6B7280',
   },
+  headerGradient: {
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.lg,
+    ...SHADOWS.md,
+  },
   header: {
+    paddingHorizontal: SPACING.lg,
+  },
+  headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
   },
-  headerInfo: {
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
-    marginRight: 12,
+  },
+  iconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: BORDER_RADIUS.xl,
+    backgroundColor: COLORS.warningLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SPACING.md,
+    ...SHADOWS.sm,
+  },
+  headerIcon: {
+    fontSize: 28,
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1F2937',
+    fontSize: FONT_SIZE.xxxl,
+    fontWeight: FONT_WEIGHT.extrabold,
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.xs,
   },
   headerSubtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 4,
-  },
-  balanceBreakdown: {
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-  },
-  balanceBreakdownText: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  availableBalance: {
-    fontWeight: '600',
-    fontSize: 13,
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    fontWeight: FONT_WEIGHT.medium,
   },
   addButton: {
-    backgroundColor: '#3B82F6',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
+    shadowColor: COLORS.warning,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  addButtonGradient: {
+    width: 48,
+    height: 48,
+    borderRadius: BORDER_RADIUS.round,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   addButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 28,
+    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.textWhite,
+  },
+  balanceCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.md,
+    ...SHADOWS.sm,
+  },
+  balanceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  balanceItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  balanceDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: COLORS.border,
+  },
+  balanceLabel: {
+    fontSize: FONT_SIZE.xs,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.xs,
+    fontWeight: FONT_WEIGHT.medium,
+  },
+  balanceValue: {
+    fontSize: FONT_SIZE.lg,
+    fontWeight: FONT_WEIGHT.bold,
+    color: COLORS.textPrimary,
   },
   scrollContent: {
     padding: 16,

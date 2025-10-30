@@ -37,7 +37,7 @@ export type HomeStackParamList = {
   Home: undefined;
   AllTransactions: undefined;
   TransactionDetail: { transactionId: string };
-  AddTransaction: { transactionId?: string };
+  AddTransaction: { transactionId?: string; initialType?: 'income' | 'expense' };
 };
 
 // Budget Stack Navigator
