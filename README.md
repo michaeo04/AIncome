@@ -1,48 +1,82 @@
-# AIncome - Personal Finance Tracker 💰
+# AIncome - AI-Powered Personal Finance Tracker 💰
 
-A comprehensive mobile application for tracking personal finances, managing budgets, and achieving savings goals. Built with Expo (React Native) and Supabase.
+A modern mobile application for tracking personal finances with AI-powered transaction parsing, personalized financial advice, and comprehensive budget management. Built with Expo (React Native), Supabase backend, and Google Gemini AI.
 
 ## 🎯 Project Status
 
 **Version**: 1.0.0
-**Development Status**: ✅ **Phase 1-10 Complete** (Production Ready)
-**Last Updated**: December 2024
+**Development Status**: ✅ **Production Ready**
+**Last Updated**: December 12, 2025
 
-### ✅ Completed Phases (10/12)
+### ✅ All Features Complete
 
-- ✅ **Phase 1**: Project Setup & Infrastructure
-- ✅ **Phase 2**: Authentication Module
-- ✅ **Phase 3**: Onboarding Module
-- ✅ **Phase 4**: Home Screen & Transaction Module
-- ✅ **Phase 5**: Category Management Module
-- ✅ **Phase 6**: Budget Management Module
-- ✅ **Phase 7**: Saving Goals Module
-- ✅ **Phase 8**: Analysis & Reports Module
-- ✅ **Phase 9**: Profile & Settings Module
-- ✅ **Phase 10**: UI/UX Polish & Enhancements
-
-### 🚧 Remaining Phases
-- **Phase 11**: Testing & Quality Assurance (Manual)
-- **Phase 12**: Documentation & Deployment Prep (Manual)
+The application includes all core features plus advanced AI capabilities:
+- ✅ Core transaction and budget management
+- ✅ AI-powered chatbot for natural transaction input
+- ✅ Personalized financial advisor with context-aware recommendations
+- ✅ Pending transactions from bank notifications
+- ✅ Goal allocation system with balance tracking
+- ✅ Financial analytics and insights
+- ✅ Multi-currency and multi-language support
+- ✅ Dark mode and theme customization
+- ✅ Custom category icons
 
 ---
 
 ## 📱 Features Overview
+
+### 🤖 AI-Powered Features
+
+#### AI Transaction Parser
+- Natural language transaction input (e.g., "ăn phở 50k", "lunch $15")
+- Automatic extraction of amount, category, type, and date
+- Confidence scoring and smart category suggestions
+- Fallback to rule-based parser for reliability
+- Support for Vietnamese and English inputs
+
+#### AI Financial Advisor
+- Context-aware personalized financial advice
+- User personalization based on goals, knowledge level, and concerns
+- Pre-calculated analytics for instant insights
+- Spending trend analysis and recommendations
+- Budget optimization suggestions
+- Goal achievement strategies
+- Natural conversation interface with markdown formatting
+
+#### AI Chatbot Assistant
+- Intent classification (transaction, advice, small talk)
+- Transaction confirmation cards with edit/confirm/reject options
+- Multi-transaction support in a single message
+- Real-time parsing and validation
+- Conversation history tracking
+
+### 🌟 What Makes This Project Unique
+
+Unlike traditional finance apps, AIncome leverages cutting-edge AI technology to provide:
+
+1. **Conversational Transaction Entry**: Simply type "ăn phở 50k" instead of filling out forms
+2. **Personalized Financial Coaching**: Get tailored advice based on your goals and financial situation
+3. **Smart Bank Integration**: Auto-capture transactions from bank notifications (simulated)
+4. **Intelligent Balance Management**: Separate tracking of allocated vs available money
+5. **Context-Aware Insights**: Pre-calculated analytics enable instant, relevant recommendations
+6. **Multi-language AI**: Works seamlessly in Vietnamese and English
 
 ### Core Functionality
 
 #### 🔐 Authentication & Onboarding
 - Secure user authentication with Supabase Auth
 - Email/password login and registration
-- Onboarding wizard for first-time users
-- Currency and language selection
-- Default category setup
+- Onboarding wizard with personalization questionnaire
+- Currency and language selection (10 currencies, 8 languages)
+- Default category setup (17 categories)
 - Session management with auto-persistence
 
 #### 💸 Transaction Management
-- Add, edit, and delete income/expense transactions
+- **Traditional Form**: Add/edit transactions via form interface
+- **AI Chat Input**: Natural language transaction entry
+- **Pending Transactions**: Review bank notifications before confirming
 - Real-time net balance calculation (Income - Expense)
-- Category-based organization with icons and colors
+- Category-based organization with custom icons and colors
 - Transaction history with date grouping
 - Optional notes for each transaction
 - Pull-to-refresh data updates
@@ -56,31 +90,49 @@ A comprehensive mobile application for tracking personal finances, managing budg
 - Budget detail view with transaction history
 - Over-budget warnings and notifications
 
-#### 🎯 Saving Goals
+#### 🎯 Saving Goals & Allocations
 - Create savings goals with target amounts and dates
-- **Progress Tracking**: Based on net balance since start date
+- **Goal Allocation System**:
+  - Allocate money from available balance to specific goals
+  - Track allocated vs available balance
+  - Withdraw from goals when needed
+  - Balance overview card showing net, allocated, and available balance
+  - Spending warnings when over-allocated
+- **Progress Tracking**: Based on goal allocations (not net balance)
 - **Timeline Awareness**: Expected vs Actual progress comparison
 - **Status System**: Completed (🟢), On Track (🔵), Behind (🟡), Overdue (🔴)
 - Monthly saving rate analysis and recommendations
 - Projection system to forecast goal achievement
 - Celebration UI for achieved goals
 
+#### 📱 Pending Transactions
+- Receive simulated bank notifications via webhook
+- Real-time pending transaction updates
+- Review, edit, confirm, or reject workflow
+- Auto-parsing of bank SMS messages (AI-powered)
+- Integration with bank simulator for testing
+- Edge Function webhook for receiving notifications
+
 #### 📈 Analysis & Reports
+- **Pre-calculated Analytics**: Fast insights via financial analytics system
 - **Interactive Charts**:
   - Income vs Expense bar charts
   - Monthly trends line charts
   - Category breakdown pie charts
 - **Time Periods**: This Month, Last Month, Last 3 Months, This Year
+- **Automated Reporting**: Analytics refresh on transaction changes
 - Category-wise spending percentages
 - Top spending categories identification
 - Visual financial insights
+- Spending patterns and trends
 
 #### 🗂️ Category Management
 - 17 default categories (5 income, 12 expense)
-- Create custom categories with icons and colors
+- Create custom categories with **custom emoji/icon selection**
 - Edit category details (name, icon, color)
 - Delete unused categories
-- **Icon Library**: 5 income icons, 12 expense icons
+- **Custom Icon Picker**: Choose any emoji as category icon
+- **Icon Library**: Built-in icon sets for common categories
 - **Color Palette**: 14 predefined colors
 - Duplicate prevention and validation
 
@@ -115,28 +167,47 @@ A comprehensive mobile application for tracking personal finances, managing budg
 
 ## 🛠️ Tech Stack
 
+### Frontend
 | Category | Technology |
 |----------|------------|
 | **Framework** | [Expo](https://expo.dev) SDK 54 (React Native) |
 | **Language** | TypeScript 5.9 |
 | **State Management** | [Zustand](https://github.com/pmndrs/zustand) 5.0.2 |
 | **Navigation** | [React Navigation](https://reactnavigation.org) 7.0 |
-| **UI Library** | [React Native Paper](https://reactnativepaper.com) 5.12.5 |
+| **UI Components** | Custom themed components with LinearGradient |
 | **Charts** | [React Native Chart Kit](https://github.com/indiespirit/react-native-chart-kit) 6.12.0 |
-| **Backend** | [Supabase](https://supabase.com) (PostgreSQL + Auth + Storage) |
 | **Date Handling** | [date-fns](https://date-fns.org) 4.1.0 |
+| **Icons** | Expo Vector Icons + Custom emoji icons |
 | **Image Picker** | expo-image-picker 16.0.3 |
+
+### Backend
+| Category | Technology |
+|----------|------------|
+| **BaaS** | [Supabase](https://supabase.com) (PostgreSQL + Auth + Storage + Realtime) |
+| **Edge Functions** | Deno runtime on Supabase |
+| **AI Integration** | Google Gemini 2.0 Flash API |
+| **Real-time** | Supabase Realtime for live updates |
+| **Database** | PostgreSQL with Row Level Security (RLS) |
+
+### AI & Intelligence
+| Feature | Technology |
+|---------|------------|
+| **Transaction Parsing** | Gemini AI with fallback rule-based parser |
+| **Financial Advisor** | Context-aware AI with user personalization |
+| **Intent Classification** | Smart intent detection for chat messages |
+| **Category Suggestions** | AI-powered category recommendations |
 
 ---
 
 ## 📋 Prerequisites
 
-Before you begin, ensure you have the following installed:
+Before you begin, ensure you have the following:
 
 - **Node.js**: >= 18.x
 - **npm** or **yarn**: Latest version
 - **Expo CLI**: `npm install -g expo-cli`
 - **Supabase Account**: [Free tier available](https://supabase.com)
+- **Google AI Studio Account**: For Gemini API key ([Get API key](https://aistudio.google.com/apikey))
 - **Mobile Device or Emulator**:
   - iOS Simulator (macOS only)
   - Android Emulator
@@ -180,44 +251,61 @@ npm install
 
 #### B. Run Database Migrations
 
-**Important**: Run migrations in order!
+**Important**: Run all 14 migrations in order!
 
 1. Open your Supabase project dashboard
 2. Go to **SQL Editor**
-3. Run each migration file from `supabase/migrations/` in order:
+3. Run each migration file from `supabase/migrations/` in order (001-014):
 
-**Migration 001: Initial Schema**
-```sql
--- File: supabase/migrations/001_initial_schema.sql
--- Creates tables: profiles, categories, transactions, budgets, saving_goals
--- Sets up Row Level Security (RLS) policies
--- Creates database functions and triggers
-```
+**Key Migrations**:
+- **001-006**: Core schema (profiles, categories, transactions, budgets, goals)
+- **007**: Financial analytics system (pre-calculated analytics)
+- **008**: Goal allocations system (allocate balance to goals)
+- **009**: Add custom icons support for categories
+- **010-013**: Additional enhancements and fixes
+- **014**: Pending transactions system (bank notifications)
 
-**Migration 002: Seed Default Categories**
-```sql
--- File: supabase/migrations/002_seed_default_categories.sql
--- Inserts 17 default categories (5 income, 12 expense)
--- Categories include: Salary, Bonus, Food, Transport, etc.
-```
+Each migration file contains detailed comments explaining its purpose.
 
-**Migration 003: Setup Storage**
-```sql
--- File: supabase/migrations/003_setup_storage.sql
--- Creates 'avatars' storage bucket
--- Sets up RLS policies for file upload/download
-```
+For detailed migration setup, see: `supabase/README.md` or `docs/` folder
 
-**Migration 004: Profiles Enhancements** (Phase 9)
-```sql
--- File: supabase/migrations/004_profiles_enhancements.sql
--- Adds columns: full_name, avatar_url, language, theme
--- Adds notification settings: notifications, budget_alerts, goal_reminders
-```
+#### C. Deploy Edge Functions
 
-For detailed migration setup, see: `supabase/README.md` or `QUICKSTART_DATABASE.md`
+**Important**: Deploy all 3 Edge Functions for AI features to work!
 
-#### C. Get API Credentials
+1. Install Supabase CLI (if not already installed):
+   ```bash
+   npm install -g supabase
+   ```
+
+2. Login to Supabase:
+   ```bash
+   npx supabase login
+   ```
+
+3. Link your project:
+   ```bash
+   npx supabase link --project-ref your-project-ref
+   ```
+
+4. Set the Gemini API key secret:
+   ```bash
+   npx supabase secrets set GEMINI_API_KEY=your-gemini-api-key
+   ```
+
+5. Deploy the Edge Functions:
+   ```bash
+   npx supabase functions deploy chat-gemini
+   npx supabase functions deploy parse-transaction
+   npx supabase functions deploy receive-bank-transaction
+   ```
+
+**Edge Functions**:
+- `chat-gemini` - AI chatbot and financial advisor
+- `parse-transaction` - Natural language transaction parser
+- `receive-bank-transaction` - Bank notification webhook
+
+#### D. Get API Credentials
 
 1. Go to **Project Settings** → **API**
 2. Copy the following:
@@ -234,12 +322,13 @@ EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
 
 # App Configuration
-EXPO_PUBLIC_APP_NAME=Personal Finance Tracker
+EXPO_PUBLIC_APP_NAME=AIncome
 EXPO_PUBLIC_DEFAULT_CURRENCY=VND
 EXPO_PUBLIC_DEFAULT_LANGUAGE=vi
 ```
 
 **Note**: See `.env.example` for template.
+**Important**: The Gemini API key is set as a Supabase secret (not in .env), as it's used by Edge Functions.
 
 ### 5. Start Development Server
 
@@ -267,69 +356,96 @@ npx expo start --port 8083
 AIncome/
 ├── src/
 │   ├── components/          # Reusable UI components
-│   │   ├── common/          # Shared components (Phase 10)
-│   │   │   ├── Skeleton.tsx
-│   │   │   ├── EmptyState.tsx
-│   │   │   ├── ErrorBoundary.tsx
-│   │   │   ├── LoadingOverlay.tsx
-│   │   │   ├── SuccessAnimation.tsx
+│   │   ├── common/          # Shared components
 │   │   │   ├── Card.tsx
-│   │   │   └── index.ts
+│   │   │   ├── EmptyState.tsx
+│   │   │   ├── CategoryIcon.tsx
+│   │   │   ├── CustomIconPicker.tsx
+│   │   │   ├── ThemedButton.tsx
+│   │   │   └── ThemedTextInput.tsx
+│   │   ├── chat/            # Chat interface components
+│   │   │   ├── ChatInterface.tsx
+│   │   │   ├── TransactionConfirmationCard.tsx
+│   │   │   └── FormattedText.tsx
+│   │   ├── goals/           # Goal-related components
+│   │   │   ├── BalanceOverviewCard.tsx
+│   │   │   ├── GoalAllocationCard.tsx
+│   │   │   ├── AllocationModal.tsx
+│   │   │   └── SpendingWarningModal.tsx
 │   │   ├── transactions/    # Transaction components
 │   │   ├── budget/          # Budget components
-│   │   ├── goals/           # Goal components
 │   │   └── charts/          # Chart components
 │   │
 │   ├── screens/             # Screen components
-│   │   ├── auth/            # Login, Signup (Phase 2)
-│   │   ├── onboarding/      # Welcome, Setup (Phase 3)
-│   │   ├── home/            # Home, Add/Edit Transaction (Phase 4)
-│   │   ├── budget/          # Budget List, Add/Edit, Detail (Phase 6)
-│   │   ├── goals/           # Goals List, Add/Edit, Detail (Phase 7)
-│   │   ├── analysis/        # Charts & Reports (Phase 8)
-│   │   ├── profile/         # Profile, Edit, Settings, Security, Categories (Phase 5 & 9)
+│   │   ├── auth/            # Login, Signup, ForgotPassword
+│   │   ├── onboarding/      # Welcome & Initial Setup
+│   │   ├── home/            # Home, Transactions, Pending Transactions
+│   │   ├── budget/          # Budget management (Budgets + Savings Goals tabs)
+│   │   ├── goals/           # Saving goals management
+│   │   ├── analysis/        # Enhanced analytics with charts
+│   │   ├── profile/         # Settings, Profile, Security, Categories
 │   │   └── transactions/    # Transaction screens
 │   │
-│   ├── navigation/          # Navigation setup
-│   │   ├── MainNavigator.tsx      # Tab navigation
-│   │   ├── HomeNavigator.tsx      # Home stack
-│   │   ├── BudgetNavigator.tsx    # Budget stack
-│   │   ├── GoalsNavigator.tsx     # Goals stack
-│   │   ├── AnalysisNavigator.tsx  # Analysis stack
-│   │   ├── ProfileNavigator.tsx   # Profile stack
-│   │   └── types.ts               # Navigation types
+│   ├── navigation/          # Navigation configuration
+│   │   ├── RootNavigator.tsx
+│   │   ├── HomeNavigator.tsx
+│   │   ├── BudgetNavigator.tsx
+│   │   ├── AnalysisNavigator.tsx
+│   │   ├── ProfileNavigator.tsx
+│   │   └── types.ts
 │   │
-│   ├── services/            # API services
-│   │   └── supabase.ts      # Supabase client
+│   ├── services/            # Business logic & API services
+│   │   ├── supabase.ts
+│   │   ├── aiService.ts
+│   │   ├── financialAnalyticsService.ts
+│   │   └── goalAllocationService.ts
 │   │
 │   ├── stores/              # Zustand state stores
-│   │   └── authStore.ts     # Auth state management
+│   │   ├── authStore.ts
+│   │   ├── chatStore.ts
+│   │   ├── themeStore.ts
+│   │   └── pendingTransactionsStore.ts
 │   │
 │   ├── hooks/               # Custom React hooks
+│   │   └── useThemedStyles.ts
+│   │
 │   ├── utils/               # Helper functions
-│   │   ├── helpers.ts       # Utility functions
-│   │   └── toast.ts         # Toast notification system (Phase 10)
+│   │   ├── helpers.ts
+│   │   ├── validation.ts
+│   │   └── intentClassifier.ts
 │   │
 │   ├── types/               # TypeScript type definitions
-│   │   └── index.ts         # Global types
+│   │   └── index.ts
 │   │
 │   ├── constants/           # App constants
-│   │   └── index.ts         # Constants
+│   │   └── index.ts
 │   │
 │   └── theme/               # Theme configuration
-│       └── index.ts         # Theme settings
+│       └── modernTheme.ts
 │
 ├── supabase/
-│   ├── migrations/          # Database migration scripts
-│   │   ├── 001_initial_schema.sql
-│   │   ├── 002_seed_default_categories.sql
-│   │   ├── 003_setup_storage.sql
-│   │   └── 004_profiles_enhancements.sql
+│   ├── functions/           # Edge Functions (Deno runtime)
+│   │   ├── chat-gemini/           # AI chatbot & financial advisor
+│   │   ├── parse-transaction/     # AI transaction parser
+│   │   └── receive-bank-transaction/  # Bank notification webhook
+│   ├── migrations/          # Database migrations (001-014)
+│   │   ├── 001-006_*.sql          # Core schema
+│   │   ├── 007_financial_analytics_system.sql
+│   │   ├── 008_goal_allocations_system.sql
+│   │   ├── 009_add_custom_icons.sql
+│   │   └── 014_pending_transactions.sql
 │   └── README.md            # Supabase setup guide
 │
+├── bank-simulator/          # Bank transaction simulator website
+│   └── index.html           # Standalone HTML simulator
+│
 ├── docs/                    # Documentation
-│   ├── Product Requirement Document.txt
-│   └── CLAUDE.md           # Developer guide
+│   ├── CHATBOT_FEATURE.md
+│   ├── CHATBOT_FINANCIAL_ADVISOR_GUIDE.md
+│   ├── PERSONALIZATION_FEATURE.md
+│   ├── FINANCIAL_ANALYTICS_README.md
+│   ├── GOAL_ALLOCATION_IMPLEMENTATION_PLAN.md
+│   └── Product Requirement Document.txt
 │
 ├── assets/                  # App assets
 │   ├── icon.png
@@ -342,36 +458,18 @@ AIncome/
 ├── tsconfig.json            # TypeScript config
 ├── app.json                 # Expo config
 ├── App.tsx                  # App entry point
-├── index.ts                 # Entry point
 ├── README.md                # This file
-├── CLAUDE.md                # Developer guide
-│
-├── PHASE4_COMPLETE.md       # Phase 4 documentation
-├── PHASE5_COMPLETE.md       # Phase 5 documentation
-├── PHASE6_COMPLETE.md       # Phase 6 documentation
-├── PHASE7_COMPLETE.md       # Phase 7 documentation
-├── PHASE8_COMPLETE.md       # Phase 8 documentation
-├── PHASE9_COMPLETE.md       # Phase 9 documentation
-├── PHASE10_COMPLETE.md      # Phase 10 documentation
-│
-├── SETUP_COMPLETE.md        # Setup status
-├── SETUP_DATABASE.md        # Database setup guide
-├── QUICKSTART_DATABASE.md   # Quick database setup
-│
-├── setup-database.js        # Database helper script
-├── setup-database.ps1       # Windows setup script
-├── test-database.js         # Database test script
-└── run-migrations.js        # Migration runner
+└── CLAUDE.md                # Developer guide
 ```
 
 ---
 
 ## 🗄️ Database Schema
 
-### Core Tables
+### Core Tables (14 migrations total)
 
 #### 1. **profiles**
-User profiles and settings.
+User profiles with personalization settings.
 
 ```sql
 CREATE TABLE profiles (
@@ -382,6 +480,15 @@ CREATE TABLE profiles (
   currency TEXT DEFAULT 'VND',
   language TEXT DEFAULT 'EN',
   theme TEXT DEFAULT 'light',
+  -- Personalization for AI advisor
+  financial_goals TEXT[],
+  financial_knowledge_level TEXT,
+  communication_style TEXT,
+  age_range TEXT,
+  income_level TEXT,
+  family_situation TEXT,
+  financial_concerns TEXT[],
+  -- Settings
   notifications BOOLEAN DEFAULT true,
   budget_alerts BOOLEAN DEFAULT true,
   goal_reminders BOOLEAN DEFAULT true,
@@ -394,7 +501,7 @@ CREATE TABLE profiles (
 **RLS**: Users can only access their own profile.
 
 #### 2. **categories**
-Income and expense categories.
+Income and expense categories with custom icons.
 
 ```sql
 CREATE TABLE categories (
@@ -403,6 +510,7 @@ CREATE TABLE categories (
   name TEXT NOT NULL,
   type TEXT NOT NULL CHECK (type IN ('income', 'expense')),
   icon TEXT NOT NULL,
+  custom_icon TEXT,  -- Custom emoji icon
   color TEXT NOT NULL,
   is_default BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -478,6 +586,73 @@ CREATE TABLE saving_goals (
 
 **RLS**: Users can only access their own goals.
 
+#### 6. **goal_allocations**
+Money allocated to specific goals from available balance.
+
+```sql
+CREATE TABLE goal_allocations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) NOT NULL,
+  goal_id UUID REFERENCES saving_goals(id) ON DELETE CASCADE,
+  amount DECIMAL(15, 2) NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('deposit', 'withdraw')),
+  note TEXT,
+  active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**RLS**: Users can only access their own allocations.
+
+**Purpose**: Track money movement into/out of goals, separate from net balance.
+
+#### 7. **pending_transactions**
+Bank notifications awaiting user confirmation.
+
+```sql
+CREATE TABLE pending_transactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) NOT NULL,
+  bank_name TEXT,
+  amount DECIMAL(15, 2) NOT NULL,
+  transaction_type TEXT,
+  description TEXT,
+  transaction_time TIMESTAMPTZ,
+  raw_message TEXT,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'rejected')),
+  parsed_category_id UUID REFERENCES categories(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**RLS**: Users can only access their own pending transactions.
+
+**Purpose**: Capture bank SMS/notifications for review before adding to transactions.
+
+#### 8. **financial_analytics**
+Pre-calculated analytics for fast insights.
+
+```sql
+CREATE TABLE financial_analytics (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) NOT NULL,
+  period TEXT NOT NULL,
+  total_income DECIMAL(15, 2) DEFAULT 0,
+  total_expense DECIMAL(15, 2) DEFAULT 0,
+  net_balance DECIMAL(15, 2) DEFAULT 0,
+  top_expense_category TEXT,
+  top_income_category TEXT,
+  category_breakdown JSONB,
+  spending_trends JSONB,
+  calculated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**RLS**: Users can only access their own analytics.
+
+**Purpose**: Store pre-calculated analytics to avoid expensive queries during AI advisor responses.
+
 ### Security: Row Level Security (RLS)
 
 All tables have RLS policies ensuring:
@@ -487,12 +662,21 @@ All tables have RLS policies ensuring:
 
 ### Database Functions
 
-- `get_goal_progress(goal_id)` - Calculate saving goal progress
+- `get_goal_progress(goal_id)` - Calculate saving goal progress based on allocations
 - `get_budget_spending(budget_id)` - Calculate budget usage
+- `get_available_balance(user_id)` - Calculate available balance (net - allocated)
+- `refresh_user_analytics(user_id)` - Regenerate analytics data
+- `initialize_user_analytics(user_id)` - Create initial analytics
 
 ### Views
 
-- `user_balance` - Real-time net balance calculation
+- `user_balance` - Real-time net balance calculation (income - expense)
+
+### Triggers
+
+- Auto-refresh analytics on transaction insert/update/delete
+- Auto-create user profile on signup
+- Auto-update timestamps
 
 ---
 
@@ -521,7 +705,103 @@ node run-migrations.js    # Run migrations (helper)
 
 ## 📚 Module Documentation
 
-### Module 1: Authentication (Phase 2)
+### Module 1: AI Chat Assistant
+**Location**: `src/screens/home/`, `src/components/chat/`, `src/services/aiService.ts`
+
+**Features**:
+- Natural language transaction input
+- Intent classification (transaction, advice, small talk)
+- Transaction confirmation cards with edit/confirm/reject
+- Real-time parsing with AI (Gemini 2.0 Flash)
+- Fallback to rule-based parser
+- Multi-transaction support
+- Conversation history tracking
+
+**Components**:
+- `ChatInterface.tsx` - Main chat UI
+- `TransactionConfirmationCard.tsx` - Confirmation UI
+- `FormattedText.tsx` - Markdown rendering
+
+**Edge Function**: `chat-gemini` for AI processing
+
+---
+
+### Module 2: Financial Advisor
+**Location**: `src/services/aiService.ts`, `supabase/functions/chat-gemini/`
+
+**Features**:
+- Context-aware personalized financial advice
+- User personalization (goals, knowledge level, concerns)
+- Pre-calculated analytics for fast insights
+- Spending trends analysis
+- Budget recommendations
+- Goal suggestions
+- Natural conversation with markdown support
+
+**Personalization Fields**:
+- Financial goals, knowledge level, communication style
+- Age range, income level, family situation
+- Financial concerns
+
+**Edge Function**: `chat-gemini` with financial advisor mode
+
+---
+
+### Module 3: Pending Transactions
+**Location**: `src/screens/home/PendingTransactionsScreen.tsx`, `src/stores/pendingTransactionsStore.ts`
+
+**Features**:
+- Receive simulated bank notifications
+- Real-time pending transaction updates via Realtime
+- Review, edit, confirm, or reject workflow
+- Auto-parsing of bank SMS messages
+- Integration with bank simulator
+
+**Edge Function**: `receive-bank-transaction` webhook
+
+**Bank Simulator**: `bank-simulator/index.html` for testing
+
+---
+
+### Module 4: Goal Allocation System
+**Location**: `src/services/goalAllocationService.ts`, `src/components/goals/`
+
+**Features**:
+- Allocate money to specific goals
+- Track allocated vs available balance
+- Deposit/withdraw to/from goals
+- Balance overview card
+- Spending warnings when over-allocated
+- Progress based on allocations (not net balance)
+
+**Components**:
+- `BalanceOverviewCard.tsx` - Shows net, allocated, available balance
+- `GoalAllocationCard.tsx` - Goal allocation interface
+- `AllocationModal.tsx` - Deposit/withdraw modal
+- `SpendingWarningModal.tsx` - Over-allocation warning
+
+**Formulas**:
+- Net Balance = Total Income - Total Expense
+- Allocated Balance = SUM(active allocations)
+- Available Balance = Net Balance - Allocated Balance
+
+---
+
+### Module 5: Financial Analytics
+**Location**: `src/services/financialAnalyticsService.ts`
+
+**Features**:
+- Pre-calculated analytics for performance
+- Auto-refresh on transaction changes
+- Category breakdown and trends
+- Time period analysis
+- Used by AI financial advisor
+
+**Database**: `financial_analytics` table with auto-refresh triggers
+
+---
+
+### Module 6: Authentication
 **Location**: `src/screens/auth/`
 
 **Features**:
@@ -537,7 +817,7 @@ node run-migrations.js    # Run migrations (helper)
 
 ---
 
-### Module 2: Onboarding (Phase 3)
+### Module 7: Onboarding
 **Location**: `src/screens/onboarding/`
 
 **Features**:
@@ -553,7 +833,7 @@ node run-migrations.js    # Run migrations (helper)
 
 ---
 
-### Module 3: Transactions (Phase 4)
+### Module 8: Transactions
 **Location**: `src/screens/home/`
 
 **Features**:
@@ -575,7 +855,7 @@ node run-migrations.js    # Run migrations (helper)
 
 ---
 
-### Module 4: Categories (Phase 5)
+### Module 9: Categories
 **Location**: `src/screens/profile/`
 
 **Features**:
@@ -595,7 +875,7 @@ node run-migrations.js    # Run migrations (helper)
 
 ---
 
-### Module 5: Budgets (Phase 6)
+### Module 10: Budgets
 **Location**: `src/screens/budget/`
 
 **Features**:
@@ -619,7 +899,7 @@ node run-migrations.js    # Run migrations (helper)
 
 ---
 
-### Module 6: Saving Goals (Phase 7)
+### Module 11: Saving Goals
 **Location**: `src/screens/goals/`
 
 **Features**:
@@ -647,7 +927,7 @@ node run-migrations.js    # Run migrations (helper)
 
 ---
 
-### Module 7: Analysis & Reports (Phase 8)
+### Module 12: Analysis & Reports
 **Location**: `src/screens/analysis/`
 
 **Features**:
@@ -669,7 +949,7 @@ node run-migrations.js    # Run migrations (helper)
 
 ---
 
-### Module 8: Profile & Settings (Phase 9)
+### Module 13: Profile & Settings
 **Location**: `src/screens/profile/`
 
 **Features**:
@@ -696,7 +976,7 @@ node run-migrations.js    # Run migrations (helper)
 
 ---
 
-### Module 9: UI/UX Components (Phase 10)
+### Module 14: Theme System
 **Location**: `src/components/common/`
 
 **Components**:
@@ -755,27 +1035,62 @@ import { Card, CardHeader, InfoRow } from '@/components/common';
 
 ## 🎯 Key Concepts
 
-### Net Balance
+### Balance Calculations
+The app uses a three-tier balance system:
+
 ```
 Net Balance = Total Income - Total Expense
+Allocated Balance = SUM(active goal_allocations WHERE type = 'deposit')
+Available Balance = Net Balance - Allocated Balance
 ```
-The net balance represents actual money after all expenses. Used for goal progress calculation.
+
+- **Net Balance**: Actual money after all income and expenses
+- **Allocated Balance**: Money set aside for specific goals
+- **Available Balance**: Money available to spend or allocate to new goals
+
+### Goal Progress Tracking
+Goals track **allocated money** (not net balance), comparing actual progress to expected progress based on timeline.
+
+```typescript
+// Progress based on allocations
+Actual Amount = SUM(goal_allocations WHERE goal_id = goal.id AND type = 'deposit')
+Progress % = (Actual Amount / Target Amount) × 100
+
+// Timeline awareness
+Expected Progress = (Days Passed / Total Days) × 100
+On Track = Actual Progress >= Expected Progress
+
+// Status determination
+if (Progress >= 100) return 'Completed' (🟢)
+else if (Date.now() > target_date) return 'Overdue' (🔴)
+else if (Actual >= Expected) return 'On Track' (🔵)
+else return 'Behind' (🟡)
+```
 
 ### Budget Status Determination
 ```typescript
-if (percentage >= 100) return 'Over Budget' (Red);
-if (percentage >= alert_threshold) return 'Warning' (Yellow);
-return 'On Track' (Green);
+Percentage = (Total Spent / Budget Amount) × 100
+
+if (percentage >= 100) return 'Over Budget' (🔴)
+if (percentage >= alert_threshold) return 'Warning' (🟡)
+return 'On Track' (🟢)
 ```
 
-### Goal Progress Tracking
-Goals track net balance accumulation since start date, comparing actual progress to expected progress based on timeline.
+### AI Transaction Parsing
+The AI parser extracts structured data from natural language:
 
 ```typescript
-Expected Progress = (Days Passed / Total Days) × 100
-Actual Progress = (Net Balance / Target Amount) × 100
-On Track = Actual >= Expected
+Input: "ăn phở 50k" or "lunch $15"
+Output: {
+  amount: 50000 or 15,
+  type: 'expense',
+  category: 'Food',
+  confidence: 0.95,
+  date: today
+}
 ```
+
+Falls back to rule-based parser if AI confidence < 0.7.
 
 ---
 
@@ -1009,15 +1324,19 @@ Detailed documentation for each phase:
 
 | Metric | Count |
 |--------|-------|
-| **Phases Completed** | 10/12 |
-| **Total Screens** | 25+ |
+| **Development Status** | ✅ Production Ready |
+| **Total Screens** | 30+ |
 | **Total Components** | 50+ |
-| **Database Tables** | 5 |
-| **Database Migrations** | 4 |
-| **Default Categories** | 17 |
+| **Database Tables** | 8 (profiles, categories, transactions, budgets, goals, allocations, pending, analytics) |
+| **Database Migrations** | 14 |
+| **Edge Functions** | 3 (chat-gemini, parse-transaction, receive-bank-transaction) |
+| **Zustand Stores** | 4 (auth, chat, theme, pending) |
+| **Services** | 4 (supabase, AI, analytics, goal allocations) |
+| **Default Categories** | 17 (5 income, 12 expense) |
 | **Supported Currencies** | 10 |
 | **Supported Languages** | 8 |
-| **Lines of Code** | ~15,000+ |
+| **AI Models** | Google Gemini 2.0 Flash |
+| **Lines of Code** | ~20,000+ |
 
 ---
 
@@ -1038,12 +1357,47 @@ This project is licensed under the MIT License.
 
 ---
 
+## 🏦 Bank Simulator
+
+The project includes a standalone bank transaction simulator for testing the pending transactions feature.
+
+**Location**: `bank-simulator/index.html`
+
+### How to Use
+
+1. Open `bank-simulator/index.html` in a web browser
+2. Configure settings:
+   - **User ID**: Your Supabase user ID
+   - **Webhook URL**: Your `receive-bank-transaction` Edge Function URL
+   - **Bank**: Select bank (BIDV, VietcomBank, Techcombank, VPBank)
+3. Customize transaction details:
+   - Amount, type (income/expense)
+   - Description
+   - Transaction time
+4. Click "Send Transaction"
+5. The app will receive the notification in real-time
+6. Review and confirm/reject in the Pending Transactions screen
+
+### Features
+- Simulates SMS bank notifications
+- Multiple bank formats supported
+- Real-time delivery via Edge Function
+- Automatic parsing with AI
+- Testing without real bank integration
+
+---
+
 ## 📞 Support
 
 For issues, questions, or feedback:
-- Review documentation in `docs/` folder
-- Check phase completion documents
+- Review documentation in `docs/` folder:
+  - `CHATBOT_FEATURE.md` - Chat implementation
+  - `CHATBOT_FINANCIAL_ADVISOR_GUIDE.md` - Financial advisor
+  - `PERSONALIZATION_FEATURE.md` - User personalization
+  - `FINANCIAL_ANALYTICS_README.md` - Analytics system
+  - `GOAL_ALLOCATION_IMPLEMENTATION_PLAN.md` - Goal allocations
 - Consult `CLAUDE.md` for development help
+- Check `supabase/README.md` for database setup
 - Open an issue on GitHub
 
 ---
@@ -1094,8 +1448,16 @@ For issues, questions, or feedback:
 ---
 
 **Version**: 1.0.0
-**Last Updated**: December 2024
-**Status**: ✅ **Production Ready** (Phases 1-10 Complete)
+**Last Updated**: December 12, 2025
+**Status**: ✅ **Production Ready**
+
+**Key Features**:
+- 🤖 AI-powered transaction parsing and financial advice
+- 📱 Pending transactions from bank notifications
+- 💰 Goal allocation system with balance tracking
+- 📊 Pre-calculated analytics for instant insights
+- 🌙 Dark mode and theme customization
+- 🌍 Multi-currency and multi-language support
 
 🎉 **Ready for testing and deployment!**
 
