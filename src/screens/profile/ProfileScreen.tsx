@@ -19,8 +19,9 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { ProfileStackParamList } from '../../navigation/types';
 import { useAuthStore } from '../../stores/authStore';
+import { useThemeStore } from '../../stores/themeStore';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { supabase } from '../../services/supabase';
-import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT, SHADOWS } from '../../theme/modernTheme';
 
 type ProfileScreenNavigationProp = StackNavigationProp<
   ProfileStackParamList,
@@ -38,10 +39,208 @@ interface UserProfile {
 const ProfileScreen: React.FC = () => {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
   const { user, signOut } = useAuthStore();
+  const { theme } = useThemeStore();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const styles = useThemedStyles((theme) => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: theme.colors.background,
+    },
+    scrollContent: {
+      paddingBottom: 40,
+    },
+    headerGradient: {
+      paddingTop: theme.spacing.md,
+      paddingBottom: theme.spacing.lg,
+      paddingHorizontal: theme.spacing.lg,
+      marginBottom: theme.spacing.lg,
+      ...theme.shadows.md,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    headerLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    iconContainer: {
+      width: 56,
+      height: 56,
+      borderRadius: theme.borderRadius.xl,
+      backgroundColor: theme.colors.secondaryLight,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: theme.spacing.md,
+      ...theme.shadows.sm,
+    },
+    headerIcon: {
+      fontSize: 28,
+    },
+    headerTextContainer: {
+      flex: 1,
+    },
+    headerTitle: {
+      fontSize: theme.fontSize.xxxl,
+      fontWeight: theme.fontWeight.extrabold,
+      color: theme.colors.textPrimary,
+      marginBottom: theme.spacing.xs,
+    },
+    headerSubtitle: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textSecondary,
+      fontWeight: theme.fontWeight.medium,
+    },
+    userCard: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.xxl,
+      alignItems: 'center',
+      marginHorizontal: theme.spacing.lg,
+      marginBottom: theme.spacing.xxl,
+      ...theme.shadows.md,
+    },
+    avatarContainer: {
+      position: 'relative',
+      marginBottom: theme.spacing.lg,
+    },
+    avatarImage: {
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+    },
+    avatarPlaceholder: {
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+      backgroundColor: theme.colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    avatarText: {
+      fontSize: 40,
+      fontWeight: theme.fontWeight.bold,
+      color: theme.colors.textWhite,
+    },
+    editBadge: {
+      position: 'absolute',
+      right: 0,
+      bottom: 0,
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: theme.colors.surface,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 2,
+      borderColor: theme.colors.primary,
+    },
+    editBadgeText: {
+      fontSize: 14,
+    },
+    userName: {
+      fontSize: 22,
+      fontWeight: theme.fontWeight.bold,
+      color: theme.colors.textPrimary,
+      marginBottom: 4,
+    },
+    userEmail: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textSecondary,
+      marginBottom: theme.spacing.lg,
+    },
+    statsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.colors.surfaceHover,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.lg,
+      width: '100%',
+    },
+    statItem: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    statValue: {
+      fontSize: theme.fontSize.lg,
+      fontWeight: theme.fontWeight.bold,
+      color: theme.colors.textPrimary,
+      marginBottom: 4,
+    },
+    statLabel: {
+      fontSize: theme.fontSize.xs,
+      color: theme.colors.textSecondary,
+    },
+    statDivider: {
+      width: 1,
+      height: 30,
+      backgroundColor: theme.colors.border,
+    },
+    section: {
+      marginBottom: theme.spacing.xxl,
+      marginHorizontal: theme.spacing.lg,
+    },
+    sectionTitle: {
+      fontSize: theme.fontSize.sm,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.textSecondary,
+      marginBottom: theme.spacing.md,
+      marginLeft: 4,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    menuItem: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.lg,
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: theme.spacing.sm,
+      ...theme.shadows.sm,
+    },
+    menuIcon: {
+      fontSize: 24,
+      marginRight: theme.spacing.md,
+    },
+    menuContent: {
+      flex: 1,
+    },
+    menuTitle: {
+      fontSize: theme.fontSize.md,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.textPrimary,
+      marginBottom: 2,
+    },
+    menuSubtitle: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textSecondary,
+    },
+    menuArrow: {
+      fontSize: 24,
+      color: theme.colors.textTertiary,
+      fontWeight: '300',
+    },
+    logoutText: {
+      color: theme.colors.danger,
+    },
+    footer: {
+      textAlign: 'center',
+      fontSize: theme.fontSize.xs,
+      color: theme.colors.textTertiary,
+      marginTop: theme.spacing.lg,
+    },
+  }));
 
   useFocusEffect(
     useCallback(() => {
@@ -116,7 +315,7 @@ const ProfileScreen: React.FC = () => {
   if (isLoading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3B82F6" />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
       </SafeAreaView>
     );
   }
@@ -131,7 +330,7 @@ const ProfileScreen: React.FC = () => {
       >
         {/* Modern Header with Gradient */}
         <LinearGradient
-          colors={['#FFFFFF', '#F9FAFB']}
+          colors={[theme.colors.surface, theme.colors.surfaceHover]}
           style={styles.headerGradient}
         >
           <View style={styles.header}>
@@ -292,210 +491,5 @@ const ProfileScreen: React.FC = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  headerGradient: {
-    paddingTop: SPACING.md,
-    paddingBottom: SPACING.lg,
-    paddingHorizontal: SPACING.lg,
-    marginBottom: SPACING.lg,
-    ...SHADOWS.md,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  iconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: BORDER_RADIUS.xl,
-    backgroundColor: COLORS.secondaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: SPACING.md,
-    ...SHADOWS.sm,
-  },
-  headerIcon: {
-    fontSize: 28,
-  },
-  headerTextContainer: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: FONT_SIZE.xxxl,
-    fontWeight: FONT_WEIGHT.extrabold,
-    color: COLORS.textPrimary,
-    marginBottom: SPACING.xs,
-  },
-  headerSubtitle: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
-    fontWeight: FONT_WEIGHT.medium,
-  },
-  userCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
-    marginHorizontal: 16,
-    marginBottom: 24,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-  },
-  avatarContainer: {
-    position: 'relative',
-    marginBottom: 16,
-  },
-  avatarImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-  },
-  avatarPlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#3B82F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: {
-    fontSize: 40,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  editBadge: {
-    position: 'absolute',
-    right: 0,
-    bottom: 0,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#3B82F6',
-  },
-  editBadgeText: {
-    fontSize: 14,
-  },
-  userName: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#1F2937',
-    marginBottom: 4,
-  },
-  userEmail: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginBottom: 16,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    padding: 16,
-    width: '100%',
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1F2937',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  statDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: '#E5E7EB',
-  },
-  section: {
-    marginBottom: 24,
-    marginHorizontal: 16,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#6B7280',
-    marginBottom: 12,
-    marginLeft: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  menuItem: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-  },
-  menuIcon: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  menuContent: {
-    flex: 1,
-  },
-  menuTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 2,
-  },
-  menuSubtitle: {
-    fontSize: 13,
-    color: '#6B7280',
-  },
-  menuArrow: {
-    fontSize: 24,
-    color: '#9CA3AF',
-    fontWeight: '300',
-  },
-  logoutText: {
-    color: '#EF4444',
-  },
-  footer: {
-    textAlign: 'center',
-    fontSize: 12,
-    color: '#9CA3AF',
-    marginTop: 16,
-  },
-});
 
 export default ProfileScreen;

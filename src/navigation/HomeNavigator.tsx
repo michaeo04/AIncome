@@ -7,6 +7,7 @@ import HomeScreen from '../screens/home/HomeScreen';
 import AddTransactionScreen from '../screens/home/AddTransactionScreen';
 import TransactionDetailScreen from '../screens/home/TransactionDetailScreen';
 import AllTransactionsScreen from '../screens/home/AllTransactionsScreen';
+import PendingTransactionsScreen from '../screens/home/PendingTransactionsScreen';
 
 const Stack = createStackNavigator<HomeStackParamList>();
 
@@ -31,6 +32,11 @@ const HomeNavigator: React.FC = () => {
       <Stack.Screen
         name="TransactionDetail"
         component={TransactionDetailScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="PendingTransactions"
+        component={PendingTransactionsScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

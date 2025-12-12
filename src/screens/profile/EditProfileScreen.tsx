@@ -17,6 +17,8 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { ProfileStackParamList } from '../../navigation/types';
 import { useAuthStore } from '../../stores/authStore';
+import { useThemeStore } from '../../stores/themeStore';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { supabase } from '../../services/supabase';
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
@@ -29,12 +31,168 @@ type EditProfileScreenNavigationProp = StackNavigationProp<
 const EditProfileScreen: React.FC = () => {
   const navigation = useNavigation<EditProfileScreenNavigationProp>();
   const { user } = useAuthStore();
+  const { theme } = useThemeStore();
 
   const [fullName, setFullName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+
+  const styles = useThemedStyles((theme) => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: theme.colors.background,
+    },
+    scrollContent: {
+      padding: theme.spacing.lg,
+      paddingBottom: 40,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: theme.spacing.xxl,
+      paddingTop: theme.spacing.sm,
+    },
+    cancelButton: {
+      fontSize: theme.fontSize.md,
+      color: theme.colors.textSecondary,
+    },
+    headerTitle: {
+      fontSize: theme.fontSize.lg,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.textPrimary,
+    },
+    saveButton: {
+      fontSize: theme.fontSize.md,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.primary,
+    },
+    saveButtonDisabled: {
+      color: theme.colors.textTertiary,
+    },
+    avatarSection: {
+      alignItems: 'center',
+      marginBottom: theme.spacing.xxxl,
+    },
+    avatarContainer: {
+      position: 'relative',
+      marginBottom: theme.spacing.lg,
+    },
+    avatar: {
+      width: 120,
+      height: 120,
+      borderRadius: 60,
+    },
+    avatarPlaceholder: {
+      width: 120,
+      height: 120,
+      borderRadius: 60,
+      backgroundColor: theme.colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    avatarText: {
+      fontSize: 48,
+      fontWeight: theme.fontWeight.bold,
+      color: theme.colors.textWhite,
+    },
+    uploadingOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      borderRadius: 60,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    avatarActions: {
+      flexDirection: 'row',
+      gap: theme.spacing.md,
+    },
+    avatarActionButton: {
+      paddingHorizontal: theme.spacing.xl,
+      paddingVertical: 10,
+      backgroundColor: theme.colors.primary,
+      borderRadius: theme.borderRadius.md,
+    },
+    avatarActionText: {
+      color: theme.colors.textWhite,
+      fontSize: theme.fontSize.sm,
+      fontWeight: theme.fontWeight.semibold,
+    },
+    removeButton: {
+      backgroundColor: theme.colors.surface,
+      borderWidth: 1,
+      borderColor: theme.colors.danger,
+    },
+    removeButtonText: {
+      color: theme.colors.danger,
+    },
+    formSection: {
+      marginBottom: theme.spacing.xxl,
+    },
+    label: {
+      fontSize: theme.fontSize.sm,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.textPrimary,
+      marginBottom: theme.spacing.sm,
+    },
+    input: {
+      backgroundColor: theme.colors.surface,
+      borderWidth: 2,
+      borderColor: theme.colors.border,
+      borderRadius: theme.borderRadius.lg,
+      paddingHorizontal: theme.spacing.lg,
+      paddingVertical: 14,
+      fontSize: theme.fontSize.md,
+      color: theme.colors.textPrimary,
+      marginBottom: theme.spacing.lg,
+    },
+    inputDisabled: {
+      backgroundColor: theme.colors.surfaceHover,
+      color: theme.colors.textSecondary,
+    },
+    hint: {
+      fontSize: theme.fontSize.xs,
+      color: theme.colors.textTertiary,
+      marginTop: -12,
+      marginBottom: theme.spacing.lg,
+    },
+    infoCard: {
+      flexDirection: 'row',
+      backgroundColor: theme.colors.primaryLight,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.lg,
+    },
+    infoIcon: {
+      fontSize: 24,
+      marginRight: theme.spacing.md,
+    },
+    infoContent: {
+      flex: 1,
+    },
+    infoTitle: {
+      fontSize: theme.fontSize.sm,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.textPrimary,
+      marginBottom: 4,
+    },
+    infoText: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textSecondary,
+      lineHeight: 18,
+    },
+  }));
 
   useEffect(() => {
     loadProfile();
@@ -225,7 +383,7 @@ const EditProfileScreen: React.FC = () => {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3B82F6" />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
   }
@@ -265,7 +423,7 @@ const EditProfileScreen: React.FC = () => {
             )}
             {isUploading && (
               <View style={styles.uploadingOverlay}>
-                <ActivityIndicator size="large" color="#FFFFFF" />
+                <ActivityIndicator size="large" color={theme.colors.textWhite} />
               </View>
             )}
           </View>
@@ -300,7 +458,7 @@ const EditProfileScreen: React.FC = () => {
           <TextInput
             style={styles.input}
             placeholder="Enter your full name"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={theme.colors.textTertiary}
             value={fullName}
             onChangeText={setFullName}
             editable={!isSaving}
@@ -329,160 +487,5 @@ const EditProfileScreen: React.FC = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-    paddingTop: 8,
-  },
-  cancelButton: {
-    fontSize: 16,
-    color: '#6B7280',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
-  },
-  saveButton: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#3B82F6',
-  },
-  saveButtonDisabled: {
-    color: '#9CA3AF',
-  },
-  avatarSection: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  avatarContainer: {
-    position: 'relative',
-    marginBottom: 16,
-  },
-  avatar: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-  },
-  avatarPlaceholder: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#3B82F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: {
-    fontSize: 48,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  uploadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    borderRadius: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  avatarActionButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: '#3B82F6',
-    borderRadius: 8,
-  },
-  avatarActionText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  removeButton: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#EF4444',
-  },
-  removeButtonText: {
-    color: '#EF4444',
-  },
-  formSection: {
-    marginBottom: 24,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: '#1F2937',
-    marginBottom: 16,
-  },
-  inputDisabled: {
-    backgroundColor: '#F3F4F6',
-    color: '#6B7280',
-  },
-  hint: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    marginTop: -12,
-    marginBottom: 16,
-  },
-  infoCard: {
-    flexDirection: 'row',
-    backgroundColor: '#EFF6FF',
-    borderRadius: 12,
-    padding: 16,
-  },
-  infoIcon: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  infoContent: {
-    flex: 1,
-  },
-  infoTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 4,
-  },
-  infoText: {
-    fontSize: 13,
-    color: '#6B7280',
-    lineHeight: 18,
-  },
-});
 
 export default EditProfileScreen;

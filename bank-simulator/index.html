@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bank Transaction Simulator - AIncome</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      color: white;
+      text-align: center;
+      margin-bottom: 40px;
+      font-size: 36px;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+
+    h3 {
+      font-size: 18px;
+      margin-bottom: 20px;
+      color: #1f2937;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 30px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      margin-bottom: 20px;
+    }
+
+    .bank-templates {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+
+    .bank-btn {
+      padding: 20px;
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .bank-btn:hover {
+      border-color: #3b82f6;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+    }
+
+    .bank-btn.active {
+      border-color: #3b82f6;
+      background: #eff6ff;
+    }
+
+    .bank-name {
+      font-weight: 600;
+      font-size: 16px;
+      margin-bottom: 5px;
+      color: #1f2937;
+    }
+
+    .bank-code {
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #374151;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 16px;
+      font-family: inherit;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .preview {
+      background: #f9fafb;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 15px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      white-space: pre-wrap;
+      margin-top: 10px;
+      min-height: 100px;
+      color: #1f2937;
+    }
+
+    button {
+      width: 100%;
+      padding: 16px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #2563eb;
+    }
+
+    button:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+
+    .config-section {
+      background: #fef3c7;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+
+    .status {
+      text-align: center;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 15px;
+      font-weight: 600;
+      display: none;
+    }
+
+    .status.success {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .status.error {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    small {
+      color: #6b7280;
+      font-size: 13px;
+    }
+
+    .info-box {
+      background: #eff6ff;
+      border-left: 4px solid #3b82f6;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+      font-size: 14px;
+      color: #1e40af;
+    }
+
+    .info-box strong {
+      display: block;
+      margin-bottom: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🏦 Bank Transaction Simulator</h1>
+
+    <!-- Configuration -->
+    <div class="card config-section">
+      <h3>⚙️ Configuration</h3>
+      <div class="form-group">
+        <label>User ID (from your app)</label>
+        <input type="text" id="userId" placeholder="Enter user UUID (e.g., a1b2c3d4-...)" />
+        <small>💡 Get this from your app's Profile screen → Look for your user ID</small>
+      </div>
+      <div class="form-group">
+        <label>Webhook URL</label>
+        <input type="text" id="webhookUrl" value="https://YOUR_PROJECT.supabase.co/functions/v1/receive-bank-transaction" />
+        <small>💡 Replace YOUR_PROJECT with your Supabase project reference</small>
+      </div>
+    </div>
+
+    <!-- Bank Selection -->
+    <div class="card">
+      <h3>Select Bank</h3>
+      <div class="bank-templates">
+        <div class="bank-btn active" data-bank="BIDV">
+          <div class="bank-name">BIDV</div>
+          <div class="bank-code">Bank for Investment</div>
+        </div>
+        <div class="bank-btn" data-bank="VietcomBank">
+          <div class="bank-name">VietcomBank</div>
+          <div class="bank-code">VCB</div>
+        </div>
+        <div class="bank-btn" data-bank="Techcombank">
+          <div class="bank-name">Techcombank</div>
+          <div class="bank-code">TCB</div>
+        </div>
+        <div class="bank-btn" data-bank="VPBank">
+          <div class="bank-name">VPBank</div>
+          <div class="bank-code">VPB</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transaction Form -->
+    <div class="card">
+      <h3>Transaction Details</h3>
+
+      <div class="form-group">
+        <label>Transaction Type</label>
+        <select id="txnType">
+          <option value="expense">Chi tiêu (Expense)</option>
+          <option value="income">Thu nhập (Income)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Amount (VND)</label>
+        <input type="number" id="amount" value="50000" step="1000" />
+      </div>
+
+      <div class="form-group">
+        <label>Merchant / Description</label>
+        <input type="text" id="merchant" placeholder="e.g., Highlands Coffee, Circle K, Vinmart" value="Highlands Coffee" />
+      </div>
+
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="date" />
+      </div>
+
+      <div class="form-group">
+        <label>SMS Preview</label>
+        <div class="preview" id="smsPreview"></div>
+      </div>
+
+      <button id="sendBtn">Send Transaction to App 📲</button>
+      <div id="status" class="status"></div>
+
+      <div class="info-box">
+        <strong>📝 How it works:</strong>
+        1. Fill in the transaction details above<br>
+        2. See the realistic SMS preview<br>
+        3. Click "Send Transaction to App"<br>
+        4. The mobile app will receive it instantly via webhook<br>
+        5. Check your app's home screen for the pending transaction!
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Bank SMS Templates - Realistic Vietnamese bank notification formats
+    const templates = {
+      BIDV: (type, amount, merchant, date) =>
+        `BIDV: ${type === 'expense' ? '-' : '+'}${amount.toLocaleString('vi-VN')} VND ${merchant ? 'tai ' + merchant : ''} ngay ${date}. SD: 2,500,000 VND`,
+
+      VietcomBank: (type, amount, merchant, date) =>
+        `VCB: TK ${type === 'expense' ? 'GD -' : 'GD +'}${amount.toLocaleString('vi-VN')}d ${merchant || ''} ${date}. LH: 19001836`,
+
+      Techcombank: (type, amount, merchant, date) =>
+        `TCB: ${type === 'expense' ? 'Tru' : 'Cong'} ${amount.toLocaleString('vi-VN')} VND. ${merchant || ''} ${date}. SD: 3,200,000 VND`,
+
+      VPBank: (type, amount, merchant, date) =>
+        `VPBank: ${type === 'expense' ? '-' : '+'}${amount.toLocaleString('vi-VN')} VND mua hang tai ${merchant || 'POS'} ngay ${date}`
+    };
+
+    let selectedBank = 'BIDV';
+
+    // Set today as default date
+    document.getElementById('date').valueAsDate = new Date();
+
+    // Bank selection handlers
+    document.querySelectorAll('.bank-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.bank-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedBank = btn.dataset.bank;
+        updatePreview();
+      });
+    });
+
+    // Update preview on any input change
+    ['txnType', 'amount', 'merchant', 'date'].forEach(id => {
+      document.getElementById(id).addEventListener('input', updatePreview);
+    });
+
+    // Update SMS preview
+    function updatePreview() {
+      const type = document.getElementById('txnType').value;
+      const amount = parseInt(document.getElementById('amount').value) || 0;
+      const merchant = document.getElementById('merchant').value;
+      const date = document.getElementById('date').value;
+      const dateFormatted = new Date(date).toLocaleDateString('vi-VN');
+
+      const sms = templates[selectedBank](type, amount, merchant, dateFormatted);
+      document.getElementById('smsPreview').textContent = sms;
+    }
+
+    // Send transaction to webhook
+    document.getElementById('sendBtn').addEventListener('click', async () => {
+      const userId = document.getElementById('userId').value.trim();
+      const webhookUrl = document.getElementById('webhookUrl').value.trim();
+      const smsText = document.getElementById('smsPreview').textContent;
+
+      // Validation
+      if (!userId) {
+        showStatus('❌ Please enter User ID', 'error');
+        return;
+      }
+
+      if (!webhookUrl || webhookUrl.includes('YOUR_PROJECT')) {
+        showStatus('❌ Please update the Webhook URL with your Supabase project URL', 'error');
+        return;
+      }
+
+      // Send request
+      const btn = document.getElementById('sendBtn');
+      btn.disabled = true;
+      btn.textContent = 'Sending... ⏳';
+
+      try {
+        console.log('Sending transaction:', { userId, smsText, bankName: selectedBank });
+
+        const response = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: userId,
+            smsText: smsText,
+            bankName: selectedBank
+          })
+        });
+
+        console.log('Response status:', response.status, response.statusText);
+
+        let result;
+        try {
+          result = await response.json();
+        } catch (parseError) {
+          const responseText = await response.text();
+          console.error('Failed to parse JSON response:', responseText);
+          showStatus(`❌ Server error (${response.status}): Invalid JSON response`, 'error');
+          return;
+        }
+
+        console.log('Response data:', result);
+
+        if (result.success) {
+          showStatus(`✅ Transaction sent successfully! Check your app.`, 'success');
+          console.log('Parsed details:', result.parsed_details);
+        } else {
+          // Show detailed error information
+          let errorMsg = result.error || 'Unknown error';
+          if (result.details) {
+            errorMsg += `: ${result.details}`;
+          }
+          if (result.code) {
+            errorMsg += ` (Code: ${result.code})`;
+          }
+          showStatus(`❌ ${errorMsg}`, 'error');
+          console.error('Error details:', result);
+        }
+      } catch (error) {
+        console.error('Network error:', error);
+        let errorMsg = error.message;
+        if (error.message.includes('Failed to fetch')) {
+          errorMsg = 'Network error: Cannot reach the server. Check your webhook URL and internet connection.';
+        }
+        showStatus(`❌ ${errorMsg}`, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Send Transaction to App 📲';
+      }
+    });
+
+    // Show status message
+    function showStatus(message, type) {
+      const status = document.getElementById('status');
+      status.textContent = message;
+      status.className = 'status ' + type;
+      status.style.display = 'block';
+
+      // Auto-hide success message after 5 seconds
+      if (type === 'success') {
+        setTimeout(() => {
+          status.style.display = 'none';
+        }, 5000);
+      }
+    }
+
+    // Initialize preview on page load
+    updatePreview();
+
+    // Try to load saved config from localStorage
+    const savedUserId = localStorage.getItem('bankSimulatorUserId');
+    const savedWebhookUrl = localStorage.getItem('bankSimulatorWebhookUrl');
+
+    if (savedUserId) {
+      document.getElementById('userId').value = savedUserId;
+    }
+    if (savedWebhookUrl) {
+      document.getElementById('webhookUrl').value = savedWebhookUrl;
+    }
+
+    // Save config to localStorage when changed
+    document.getElementById('userId').addEventListener('change', (e) => {
+      localStorage.setItem('bankSimulatorUserId', e.target.value);
+    });
+    document.getElementById('webhookUrl').addEventListener('change', (e) => {
+      localStorage.setItem('bankSimulatorWebhookUrl', e.target.value);
+    });
+
+    console.log('🏦 Bank Transaction Simulator loaded');
+    console.log('📝 Selected bank:', selectedBank);
+  </script>
+</body>
+</html>

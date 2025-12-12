@@ -14,6 +14,8 @@ interface TransactionConfirmationCardProps {
   onCancel: () => void;
   onConfirm: () => void;
   isLoading?: boolean;
+  isSaved?: boolean;
+  onCreateCategory?: (suggestedName: string, type: 'income' | 'expense') => void;
 }
 
 const TransactionConfirmationCard: React.FC<TransactionConfirmationCardProps> = ({
@@ -22,7 +24,9 @@ const TransactionConfirmationCard: React.FC<TransactionConfirmationCardProps> = 
   onEdit,
   onCancel,
   onConfirm,
-  isLoading = false
+  isLoading = false,
+  isSaved = false,
+  onCreateCategory
 }) => {
   // Render confidence stars
   const renderConfidenceStars = () => {
@@ -40,11 +44,18 @@ const TransactionConfirmationCard: React.FC<TransactionConfirmationCardProps> = 
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isSaved && styles.savedContainer]}>
+      {/* Saved Badge */}
+      {isSaved && (
+        <View style={styles.savedBadge}>
+          <Text style={styles.savedBadgeText}>✅ Đã lưu</Text>
+        </View>
+      )}
+
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerIcon}>✅</Text>
-        <Text style={styles.headerText}>Mình hiểu rồi:</Text>
+        <Text style={styles.headerIcon}>{isSaved ? '✅' : '✅'}</Text>
+        <Text style={styles.headerText}>{isSaved ? 'Đã lưu giao dịch:' : 'Mình hiểu rồi:'}</Text>
       </View>
 
       {/* Transaction Details */}
@@ -110,42 +121,65 @@ const TransactionConfirmationCard: React.FC<TransactionConfirmationCardProps> = 
         </Text>
       </View>
 
-      {/* Action Buttons */}
-      <View style={styles.actions}>
-        <TouchableOpacity
-          style={styles.secondaryButton}
-          onPress={onEdit}
-          disabled={isLoading}
-        >
-          <Text style={styles.secondaryButtonText}>✏️ Sửa</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.secondaryButton}
-          onPress={onCancel}
-          disabled={isLoading}
-        >
-          <Text style={styles.secondaryButtonText}>❌ Hủy</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={onConfirm}
-          disabled={isLoading}
-          activeOpacity={0.8}
-          style={{ flex: 1 }}
-        >
-          <LinearGradient
-            colors={[COLORS.success, COLORS.successDark]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={[styles.confirmButton, isLoading && styles.buttonDisabled]}
-          >
-            <Text style={styles.confirmButtonText}>
-              {isLoading ? 'Đang lưu...' : '✅ Lưu'}
+      {/* Category Suggestion */}
+      {transaction.suggestedCategory && (
+        <View style={styles.suggestionContainer}>
+          <Text style={styles.suggestionIcon}>💡</Text>
+          <View style={styles.suggestionContent}>
+            <Text style={styles.suggestionTitle}>Gợi ý hạng mục</Text>
+            <Text style={styles.suggestionText}>
+              Tạo hạng mục "{transaction.suggestedCategory}" để phân loại chính xác hơn?
             </Text>
-          </LinearGradient>
-        </TouchableOpacity>
-      </View>
+            {onCreateCategory && (
+              <TouchableOpacity
+                style={styles.createCategoryButton}
+                onPress={() => onCreateCategory(transaction.suggestedCategory!, transaction.type)}
+              >
+                <Text style={styles.createCategoryButtonText}>➕ Tạo hạng mục</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
+
+      {/* Action Buttons */}
+      {!isSaved && (
+        <View style={styles.actions}>
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={onEdit}
+            disabled={isLoading}
+          >
+            <Text style={styles.secondaryButtonText}>✏️ Sửa</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={onCancel}
+            disabled={isLoading}
+          >
+            <Text style={styles.secondaryButtonText}>❌ Hủy</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={onConfirm}
+            disabled={isLoading}
+            activeOpacity={0.8}
+            style={{ flex: 1 }}
+          >
+            <LinearGradient
+              colors={[COLORS.success, COLORS.successDark]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={[styles.confirmButton, isLoading && styles.buttonDisabled]}
+            >
+              <Text style={styles.confirmButtonText}>
+                {isLoading ? 'Đang lưu...' : '✅ Lưu'}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 };
@@ -157,6 +191,28 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
     marginVertical: SPACING.sm,
     ...SHADOWS.md,
+  },
+  savedContainer: {
+    opacity: 0.7,
+    backgroundColor: COLORS.successLight,
+    borderWidth: 2,
+    borderColor: COLORS.success,
+  },
+  savedBadge: {
+    position: 'absolute',
+    top: SPACING.sm,
+    right: SPACING.sm,
+    backgroundColor: COLORS.success,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    ...SHADOWS.sm,
+    zIndex: 1,
+  },
+  savedBadgeText: {
+    color: COLORS.textWhite,
+    fontSize: FONT_SIZE.xs,
+    fontWeight: FONT_WEIGHT.bold,
   },
   header: {
     flexDirection: 'row',
@@ -236,6 +292,48 @@ const styles = StyleSheet.create({
   confidencePercent: {
     fontSize: FONT_SIZE.md,
     fontWeight: FONT_WEIGHT.bold,
+  },
+  suggestionContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#3B82F6',
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.md,
+    marginTop: SPACING.md,
+    gap: SPACING.sm,
+  },
+  suggestionIcon: {
+    fontSize: 20,
+  },
+  suggestionContent: {
+    flex: 1,
+  },
+  suggestionTitle: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: FONT_WEIGHT.bold,
+    color: '#1E40AF',
+    marginBottom: SPACING.xs,
+  },
+  suggestionText: {
+    fontSize: FONT_SIZE.sm,
+    color: '#1E3A8A',
+    lineHeight: 18,
+    marginBottom: SPACING.sm,
+  },
+  createCategoryButton: {
+    backgroundColor: '#3B82F6',
+    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    alignItems: 'center',
+    marginTop: SPACING.xs,
+    ...SHADOWS.xs,
+  },
+  createCategoryButtonText: {
+    color: COLORS.textWhite,
+    fontSize: FONT_SIZE.sm,
+    fontWeight: FONT_WEIGHT.semibold,
   },
   actions: {
     flexDirection: 'row',

@@ -48,40 +48,54 @@ serve(async (req) => {
       );
     }
 
-    // Prepare category list for prompt with IDs
+    // Get Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Get default system categories that user hasn't created yet
+    const { data: defaultCategories } = await supabase
+      .from('categories')
+      .select('*')
+      .is('user_id', null)
+      .eq('is_default', true);
+
+    // Filter out default categories that user already has (by name)
+    const userCategoryNames = categories.map(c => c.name.toLowerCase());
+    const availableDefaultCategories = defaultCategories?.filter(
+      dc => !userCategoryNames.includes(dc.name.toLowerCase())
+    ) || [];
+
+    // Prepare user category list for prompt with IDs
     const categoryList = categories
       .map(cat => `- ID: "${cat.id}" | Name: ${cat.name} | Type: ${cat.type === 'income' ? 'Thu' : 'Chi'} | Icon: ${cat.icon}`)
       .join('\n');
 
-    // Create prompt for Gemini - now supports multiple transactions
-    const prompt = `Bạn là một trợ lý tài chính thông minh. Nhiệm vụ của bạn là phân tích tin nhắn tiếng Việt về giao dịch tài chính và trích xuất thông tin theo định dạng JSON.
+    // Prepare suggested categories list (categories user hasn't created yet)
+    const suggestedCategoriesList = availableDefaultCategories
+      .map(cat => `- Name: ${cat.name} | Type: ${cat.type === 'income' ? 'Thu' : 'Chi'} | Icon: ${cat.icon}`)
+      .join('\n');
 
-Danh sách các hạng mục có sẵn:
+    // Create prompt for Gemini - now supports multiple transactions
+    const prompt = `You are a financial transaction parser. Parse Vietnamese transaction messages and return ONLY a JSON object.
+
+USER'S CATEGORIES (prefer these first):
 ${categoryList}
 
-Hãy trích xuất từ tin nhắn:
-1. type: "income" (thu) hoặc "expense" (chi)
-2. amount: số tiền (VND, chuyển về đơn vị đồng)
-3. category_id: chọn UUID từ cột "ID" trong danh sách trên (PHẢI là UUID, KHÔNG PHẢI tên hay icon!)
-4. category_name: tên hạng mục từ cột "Name"
-5. note: ghi chú ngắn gọn về giao dịch
-6. date: ngày giao dịch (ISO format YYYY-MM-DD)
-7. confidence: độ tin cậy (0-1)
+${suggestedCategoriesList.length > 0 ? `SUGGESTED CATEGORIES (user hasn't created yet - suggest if better match):
+${suggestedCategoriesList}` : ''}
 
-Quy tắc:
-- Số tiền: 50k = 50,000 | 1tr = 1,000,000 | 1.5 triệu = 1,500,000
-- Nếu không nói rõ ngày → dùng hôm nay (${new Date().toISOString().split('T')[0]})
-- Nếu không chắc hạng mục → chọn "Khác" với confidence thấp
-- Ghi chú ngắn gọn, không quá 100 ký tự
+Message to parse: "${message}"
 
-**HỖ TRỢ NHIỀU GIAO DỊCH:**
-- Nếu tin nhắn có NHIỀU giao dịch (ví dụ: "phở 30k, cafe 50k" hoặc dạng danh sách dòng mới), hãy trả về MẢNG các giao dịch
-- Mỗi giao dịch là một object riêng biệt trong mảng
-- Nếu chỉ có MỘT giao dịch, vẫn trả về mảng với 1 phần tử
+Rules:
+- 50k = 50,000 VND | 1tr = 1,000,000 VND | 1.5 triệu = 1,500,000 VND
+- If no date mentioned, use today: ${new Date().toISOString().split('T')[0]}
+- PREFER user's categories first
+- If no good match in user's categories BUT there's a better match in SUGGESTED categories, use a generic category and set "suggestedCategory"
+- Match category_id from the "ID" column above (must be valid UUID)
+- Note should be brief (max 100 chars)
 
-Tin nhắn cần phân tích: "${message}"
-
-Trả về CHÍNH XÁC JSON với định dạng MẢNG (category_id PHẢI là UUID từ cột ID):
+Return ONLY this JSON format (no markdown, no explanation):
 {
   "transactions": [
     {
@@ -89,25 +103,19 @@ Trả về CHÍNH XÁC JSON với định dạng MẢNG (category_id PHẢI là 
       "amount": 30000,
       "category_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
       "category_name": "Ăn uống",
-      "note": "Ăn phở",
-      "date": "2025-01-13",
-      "confidence": 0.95
-    },
-    {
-      "type": "expense",
-      "amount": 50000,
-      "category_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-      "category_name": "Ăn uống",
-      "note": "Cà phê",
-      "date": "2025-01-13",
-      "confidence": 0.95
+      "note": "Ăn sáng",
+      "date": "${new Date().toISOString().split('T')[0]}",
+      "confidence": 0.95,
+      "suggestedCategory": "Sức khỏe"
     }
   ]
-}`;
+}
+
+Note: Only include "suggestedCategory" if the transaction better matches a SUGGESTED category than user's categories.`;
 
     // Call Google Gemini API
     const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
       {
         method: 'POST',
         headers: {
@@ -120,8 +128,7 @@ Trả về CHÍNH XÁC JSON với định dạng MẢNG (category_id PHẢI là 
             }]
           }],
           generationConfig: {
-            temperature: 0.3,
-            responseMimeType: 'application/json'
+            temperature: 0.3
           }
         }),
       }
@@ -129,15 +136,25 @@ Trả về CHÍNH XÁC JSON với định dạng MẢNG (category_id PHẢI là 
 
     if (!geminiResponse.ok) {
       const errorText = await geminiResponse.text();
-      console.error('Gemini API error:', errorText);
+      console.error('❌ Gemini API error status:', geminiResponse.status);
+      console.error('❌ Gemini API error body:', errorText);
       return new Response(
-        JSON.stringify({ success: false, error: 'AI parsing failed' }),
+        JSON.stringify({
+          success: false,
+          error: `AI parsing failed: ${geminiResponse.status}`,
+          details: errorText.substring(0, 200)
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     const geminiData = await geminiResponse.json();
-    const aiResponse = geminiData.candidates[0].content.parts[0].text;
+    let aiResponse = geminiData.candidates[0].content.parts[0].text;
+
+    // Remove markdown code blocks if present (```json ... ```)
+    aiResponse = aiResponse.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
+
+    console.log('AI Response (cleaned):', aiResponse);
 
     // Parse AI response
     let parsedData;
@@ -145,8 +162,13 @@ Trả về CHÍNH XÁC JSON với định dạng MẢNG (category_id PHẢI là 
       parsedData = JSON.parse(aiResponse);
     } catch (e) {
       console.error('Failed to parse AI response:', e);
+      console.error('Raw response was:', aiResponse);
       return new Response(
-        JSON.stringify({ success: false, error: 'Invalid AI response format' }),
+        JSON.stringify({
+          success: false,
+          error: 'Invalid AI response format',
+          rawResponse: aiResponse.substring(0, 200)
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

@@ -91,6 +91,7 @@ export interface Category {
   name: string;
   type: 'income' | 'expense';
   icon: string;
+  icon_url?: string; // Custom uploaded icon image URL
   color: string;
   is_default: boolean;
   created_at: string;
@@ -129,6 +130,7 @@ export interface SavingGoal {
   user_id: string;
   name: string;
   target_amount: number;
+  allocated_amount: number; // Money user has allocated to this goal
   start_date: string;
   target_date: string;
   icon: string;
@@ -162,6 +164,43 @@ export interface GoalProgress {
   progress_percent: number;
 }
 
+// Goal Allocation Types
+export interface GoalAllocation {
+  id: string;
+  user_id: string;
+  goal_id: string;
+  amount: number; // Positive for deposit, negative for withdrawal
+  type: 'deposit' | 'withdrawal';
+  note?: string;
+  created_at: string;
+}
+
+export interface AvailableBalance {
+  net_balance: number; // Total income - expense
+  allocated_balance: number; // Total allocated to goals
+  available_balance: number; // What's left (net - allocated)
+}
+
+export interface GoalProgressView {
+  goal_id: string;
+  user_id: string;
+  name: string;
+  target_amount: number;
+  allocated_amount: number;
+  start_date: string;
+  target_date: string;
+  icon: string;
+  color: string;
+  status: 'active' | 'completed' | 'archived';
+  note?: string;
+  progress_percent: number;
+  remaining_amount: number;
+  is_completed: boolean;
+  days_remaining: number;
+  created_at: string;
+  updated_at: string;
+}
+
 // Chat & AI Assistant Types
 export interface ChatMessage {
   id: string;
@@ -181,6 +220,7 @@ export interface ParsedTransaction {
   note?: string;
   date: string;
   confidence: number;
+  suggestedCategory?: string; // System category that would be a better match
 }
 
 export type ChatIntent = 'small_talk' | 'create_transaction' | 'financial_advice' | 'unknown';
@@ -335,4 +375,27 @@ export interface FinancialAdviceResponse {
   insights: FinancialInsight[];
   context: ChatbotFinancialContext;
   recommendations: string[];
+}
+
+// ========================================
+// Pending Transactions Types
+// ========================================
+// For bank transaction auto-detection feature
+
+export interface PendingTransaction {
+  id: string;
+  user_id: string;
+  raw_sms_text: string; // Original bank SMS notification text
+  bank_name?: string; // e.g., 'BIDV', 'VietcomBank', 'Techcombank', 'VPBank'
+  parsed_type: 'income' | 'expense';
+  parsed_amount: number;
+  parsed_category_id?: string;
+  parsed_category?: Category;
+  parsed_note?: string;
+  parsed_date: string;
+  parsed_merchant?: string; // Extracted merchant name
+  confidence?: number; // AI parsing confidence (0.0-1.0)
+  status: 'pending' | 'confirmed' | 'rejected';
+  created_at: string;
+  updated_at: string;
 }

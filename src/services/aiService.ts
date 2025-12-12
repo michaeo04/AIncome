@@ -488,6 +488,195 @@ export function classifyIntent(message: string): IntentClassificationResult {
 }
 
 /**
+ * Analyze question to determine time period and focus
+ * Handles flexible time references like "yesterday", "last week", "last 30 days", etc.
+ */
+function analyzeQuestion(question: string): {
+  timePeriod: 'today' | 'yesterday' | 'week' | 'last_week' | 'month' | 'last_month' | 'quarter' | 'year' | 'last_7_days' | 'last_30_days' | 'custom';
+  focus: 'spending' | 'income' | 'savings' | 'budget' | 'goal' | 'category' | 'trend' | 'health' | 'general';
+  specificCategory?: string;
+} {
+  const lowerQ = question.toLowerCase();
+
+  // Detect time period - more flexible patterns
+  let timePeriod: any = 'month'; // default
+
+  // Today/Yesterday
+  if (lowerQ.includes('hôm nay') || lowerQ.includes('today') || lowerQ.includes('bây giờ')) timePeriod = 'today';
+  else if (lowerQ.includes('hôm qua') || lowerQ.includes('yesterday') || lowerQ.includes('ngày hôm qua')) timePeriod = 'yesterday';
+
+  // Week patterns
+  else if (lowerQ.includes('tuần trước') || lowerQ.includes('last week')) timePeriod = 'last_week';
+  else if (lowerQ.includes('tuần này') || lowerQ.includes('this week') || lowerQ.includes('tuần')) timePeriod = 'week';
+  else if (lowerQ.includes('7 ngày') || lowerQ.includes('7 days') || lowerQ.includes('bảy ngày')) timePeriod = 'last_7_days';
+
+  // Month patterns
+  else if (lowerQ.includes('tháng trước') || lowerQ.includes('last month')) timePeriod = 'last_month';
+  else if (lowerQ.includes('tháng này') || lowerQ.includes('this month') || lowerQ.includes('tháng')) timePeriod = 'month';
+  else if (lowerQ.includes('30 ngày') || lowerQ.includes('30 days') || lowerQ.includes('ba mươi ngày')) timePeriod = 'last_30_days';
+
+  // Quarter/Year
+  else if (lowerQ.includes('quý') || lowerQ.includes('quarter') || lowerQ.includes('3 tháng')) timePeriod = 'quarter';
+  else if (lowerQ.includes('năm') || lowerQ.includes('year') || lowerQ.includes('12 tháng')) timePeriod = 'year';
+
+  // Detect focus - aligned with app features
+  let focus: any = 'general';
+
+  // Spending (Transactions - expense type)
+  if (lowerQ.includes('chi tiêu') || lowerQ.includes('chi phí') || lowerQ.includes('expense') || lowerQ.includes('tiêu')) focus = 'spending';
+
+  // Income (Transactions - income type)
+  else if (lowerQ.includes('thu nhập') || lowerQ.includes('thu') || lowerQ.includes('income') || lowerQ.includes('lương') || lowerQ.includes('kiếm')) focus = 'income';
+
+  // Savings (Net balance analysis)
+  else if (lowerQ.includes('tiết kiệm') || lowerQ.includes('saving') || lowerQ.includes('để dành') || lowerQ.includes('dư')) focus = 'savings';
+
+  // Budget (Budget feature in app)
+  else if (lowerQ.includes('ngân sách') || lowerQ.includes('budget') || lowerQ.includes('hạn mức')) focus = 'budget';
+
+  // Goals (Saving goals feature)
+  else if (lowerQ.includes('mục tiêu') || lowerQ.includes('goal') || lowerQ.includes('đích')) focus = 'goal';
+
+  // Category analysis
+  else if (lowerQ.includes('danh mục') || lowerQ.includes('category') || lowerQ.includes('loại')) focus = 'category';
+
+  // Trend analysis (financial metrics)
+  else if (lowerQ.includes('xu hướng') || lowerQ.includes('trend') || lowerQ.includes('so sánh') || lowerQ.includes('thay đổi') || lowerQ.includes('tăng') || lowerQ.includes('giảm')) focus = 'trend';
+
+  // Financial health (health score)
+  else if (lowerQ.includes('sức khỏe') || lowerQ.includes('health') || lowerQ.includes('tình hình') || lowerQ.includes('tổng quan')) focus = 'health';
+
+  // Try to detect specific category mentions
+  let specificCategory: string | undefined;
+  const categoryKeywords = [
+    'ăn uống', 'food', 'đi lại', 'transport', 'mua sắm', 'shopping',
+    'giải trí', 'entertainment', 'sức khỏe', 'health', 'nhà cửa', 'house',
+    'giáo dục', 'education', 'tiện ích', 'utilities'
+  ];
+
+  for (const keyword of categoryKeywords) {
+    if (lowerQ.includes(keyword)) {
+      specificCategory = keyword;
+      focus = 'category';
+      break;
+    }
+  }
+
+  return { timePeriod, focus, specificCategory };
+}
+
+/**
+ * Get time-specific financial data
+ */
+async function getTimeSpecificData(userId: string, timePeriod: string): Promise<any> {
+  const now = new Date();
+  let startDate: Date;
+  let endDate = new Date(now);
+  let periodLabel = 'tháng này';
+
+  switch (timePeriod) {
+    case 'today':
+      startDate = new Date(now);
+      startDate.setHours(0, 0, 0, 0);
+      periodLabel = 'hôm nay';
+      break;
+
+    case 'yesterday':
+      startDate = new Date(now);
+      startDate.setDate(startDate.getDate() - 1);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date(startDate);
+      endDate.setHours(23, 59, 59, 999);
+      periodLabel = 'hôm qua';
+      break;
+
+    case 'week':
+    case 'last_7_days':
+      startDate = new Date(now);
+      startDate.setDate(startDate.getDate() - 7);
+      periodLabel = '7 ngày qua';
+      break;
+
+    case 'last_week':
+      startDate = new Date(now);
+      startDate.setDate(startDate.getDate() - 14);
+      endDate = new Date(now);
+      endDate.setDate(endDate.getDate() - 7);
+      periodLabel = 'tuần trước';
+      break;
+
+    case 'month':
+    case 'last_30_days':
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      periodLabel = 'tháng này';
+      break;
+
+    case 'last_month':
+      startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+      endDate.setHours(23, 59, 59, 999);
+      periodLabel = 'tháng trước';
+      break;
+
+    case 'quarter':
+      startDate = new Date(now);
+      startDate.setMonth(startDate.getMonth() - 3);
+      periodLabel = 'quý này (3 tháng)';
+      break;
+
+    case 'year':
+      startDate = new Date(now);
+      startDate.setFullYear(startDate.getFullYear() - 1);
+      periodLabel = 'năm nay (12 tháng)';
+      break;
+
+    default:
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      periodLabel = 'tháng này';
+      break;
+  }
+
+  // Fetch transactions for the period
+  const { data: transactions } = await supabase
+    .from('transactions')
+    .select('*, category:categories(name, icon, type)')
+    .eq('user_id', userId)
+    .gte('date', startDate.toISOString())
+    .lte('date', endDate.toISOString())
+    .order('date', { ascending: false });
+
+  if (!transactions) return null;
+
+  const income = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + Number(t.amount), 0);
+  const expense = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + Number(t.amount), 0);
+
+  // Group by category
+  const categoryMap = new Map<string, { amount: number; count: number }>();
+  transactions.forEach(t => {
+    const catName = t.category?.name || 'Khác';
+    const existing = categoryMap.get(catName) || { amount: 0, count: 0 };
+    categoryMap.set(catName, {
+      amount: existing.amount + Number(t.amount),
+      count: existing.count + 1
+    });
+  });
+
+  const categories = Array.from(categoryMap.entries())
+    .map(([name, data]) => ({ category: name, ...data }))
+    .sort((a, b) => b.amount - a.amount);
+
+  return {
+    income,
+    expense,
+    savings: income - expense,
+    savingsRate: income > 0 ? ((income - expense) / income * 100) : 0,
+    transactionCount: transactions.length,
+    categories,
+    periodLabel
+  };
+}
+
+/**
  * Get financial advice based on user's question and their financial data
  */
 export async function getFinancialAdvice(
@@ -496,6 +685,9 @@ export async function getFinancialAdvice(
   userPersonalization?: UserPersonalization
 ): Promise<string> {
   try {
+    // Analyze the question
+    const analysis = analyzeQuestion(question);
+
     // Get user's financial context
     const context = await getChatbotFinancialContext(userId);
 
@@ -515,6 +707,9 @@ export async function getFinancialAdvice(
 Nếu bạn đã có nhiều giao dịch nhưng vẫn thấy thông báo này, hãy liên hệ hỗ trợ!`;
     }
 
+    // Get time-specific data based on question analysis
+    const periodData = await getTimeSpecificData(userId, analysis.timePeriod);
+
     // Get recent insights
     const insights = await getActiveInsights(userId);
 
@@ -525,87 +720,172 @@ Nếu bạn đã có nhiều giao dịch nhưng vẫn thấy thông báo này, h
     const healthInterp = getFinancialHealthInterpretation(context.financial_health_score);
     const savingsInterp = getSavingsRateInterpretation(context.savings_rate_current);
 
-    // Build comprehensive context for AI
+    // Get personalization-based tone and style
+    const getPersonalizedTone = () => {
+      if (!userPersonalization) return 'thân thiện và dễ hiểu';
+
+      switch(userPersonalization.communication_style) {
+        case 'casual': return 'thân thiện, gần gũi như trò chuyện với bạn bè';
+        case 'professional': return 'chuyên nghiệp, trang trọng nhưng vẫn dễ hiểu';
+        case 'brief': return 'ngắn gọn, đi thẳng vào vấn đề, không dài dòng';
+        case 'detailed': return 'chi tiết, giải thích kỹ càng từng khía cạnh';
+        case 'encouraging': return 'động viên, tích cực, hỗ trợ tinh thần';
+        default: return 'thân thiện và dễ hiểu';
+      }
+    };
+
+    const getKnowledgeLevel = () => {
+      if (!userPersonalization?.financial_knowledge) return 'người mới bắt đầu';
+
+      switch(userPersonalization.financial_knowledge) {
+        case 'beginner': return 'người mới bắt đầu - giải thích đơn giản, tránh thuật ngữ phức tạp';
+        case 'intermediate': return 'người có kinh nghiệm - có thể sử dụng thuật ngữ cơ bản';
+        case 'advanced': return 'người có kiến thức cao - có thể phân tích chuyên sâu';
+        default: return 'người mới bắt đầu';
+      }
+    };
+
+    // Build comprehensive context for AI with dynamic time period
     const systemPrompt = `
-Bạn là một cố vấn tài chính cá nhân thông minh. Hãy cung cấp lời khuyên tài chính dựa trên dữ liệu thực tế của người dùng.
+Bạn là trợ lý tài chính cá nhân của ứng dụng AIncome - ứng dụng quản lý chi tiêu thông minh. Nhiệm vụ của bạn là đưa ra lời khuyên tài chính cá nhân hóa dựa trên dữ liệu thực tế từ ứng dụng.
 
-TÌNH HÌNH TÀI CHÍNH HIỆN TẠI:
-• Số dư hiện tại: ${addThousandSeparators(Math.round(context.current_balance), ',')} VND
-• Thu nhập tháng này: ${addThousandSeparators(Math.round(context.total_income_mtd), ',')} VND
-• Chi tiêu tháng này: ${addThousandSeparators(Math.round(context.total_expense_mtd), ',')} VND
-• Tỷ lệ tiết kiệm: ${context.savings_rate_current.toFixed(1)}% (${savingsInterp.level})
-• Điểm sức khỏe tài chính: ${context.financial_health_score}/100 (${healthInterp.level})
+📱 **ỨNG DỤNG AIncome CỦA NGƯỜI DÙNG:**
+• Tính năng đang dùng: Theo dõi giao dịch, Ngân sách, Mục tiêu tiết kiệm, Phân tích chi tiêu
+• Số dư hiện tại: **${addThousandSeparators(Math.round(context.current_balance), ',')} VND**
+• Điểm sức khỏe tài chính: **${context.financial_health_score}/100** (${healthInterp.level})
+• Tỷ lệ tiết kiệm: **${context.savings_rate_current.toFixed(1)}%** (${savingsInterp.level})
 
-TRUNG BÌNH 3 THÁNG GẦN NHẤT:
-• Thu nhập TB: ${addThousandSeparators(Math.round(context.avg_monthly_income), ',')} VND
-• Chi tiêu TB: ${addThousandSeparators(Math.round(context.avg_monthly_expense), ',')} VND
+${periodData ? `
+💰 **${periodData.periodLabel.toUpperCase()} (từ giao dịch trong app):**
+• Thu nhập: ${addThousandSeparators(Math.round(periodData.income), ',')} VND
+• Chi tiêu: ${addThousandSeparators(Math.round(periodData.expense), ',')} VND
+• Tiết kiệm được: ${addThousandSeparators(Math.round(periodData.savings), ',')} VND
+• Tỷ lệ tiết kiệm: **${periodData.savingsRate.toFixed(1)}%**
+• Số giao dịch: ${periodData.transactionCount}
+
+${periodData.categories.length > 0 ? `💸 **TOP DANH MỤC CHI TIÊU ${periodData.periodLabel.toUpperCase()}:**
+${periodData.categories.slice(0, 5).map((cat: any, i: number) =>
+  `${i + 1}. **${cat.category}**: ${addThousandSeparators(Math.round(cat.amount), ',')} VND (${cat.count} giao dịch)`
+).join('\n')}` : ''}
+` : `
+💰 **THÁNG NÀY (từ giao dịch trong app):**
+• Thu nhập: ${addThousandSeparators(Math.round(context.total_income_mtd), ',')} VND
+• Chi tiêu: ${addThousandSeparators(Math.round(context.total_expense_mtd), ',')} VND
+• Tiết kiệm được: ${addThousandSeparators(Math.round(context.total_income_mtd - context.total_expense_mtd), ',')} VND`}
+
+📊 **TRUNG BÌNH 3 THÁNG (phân tích từ lịch sử app):**
+• Thu nhập TB: ${addThousandSeparators(Math.round(context.avg_monthly_income), ',')} VND/tháng
+• Chi tiêu TB: ${addThousandSeparators(Math.round(context.avg_monthly_expense), ',')} VND/tháng
 • Tỷ lệ tiết kiệm TB: ${context.avg_savings_rate.toFixed(1)}%
 
-TÌNH TRẠNG NGÂN SÁCH:
-• Vượt mức: ${context.budgets_exceeded} ngân sách
-• Cảnh báo (80-100%): ${context.budgets_warning} ngân sách
-• Lành mạnh: ${context.budgets_healthy} ngân sách
+🎯 **NGÂN SÁCH TRONG APP:**
+• Tổng ngân sách đã tạo: ${context.budgets_exceeded + context.budgets_warning + context.budgets_healthy}
+• ⚠️ Vượt mức: ${context.budgets_exceeded} ngân sách
+• 🟡 Cảnh báo (>80%): ${context.budgets_warning} ngân sách
+• ✅ Lành mạnh: ${context.budgets_healthy} ngân sách
+${context.budgets_exceeded > 0 ? '\n⚡ **Khuyến nghị:** Người dùng nên xem lại và điều chỉnh các ngân sách đã vượt mức trong app!' : ''}
 
-XU HƯỚNG:
-• Thu nhập: ${context.income_trend === 'increasing' ? 'Tăng' : context.income_trend === 'decreasing' ? 'Giảm' : 'Ổn định'}
-• Chi tiêu: ${context.expense_trend === 'increasing' ? 'Tăng' : context.expense_trend === 'decreasing' ? 'Giảm' : 'Ổn định'}
+📈 **XU HƯỚNG TÀI CHÍNH:**
+• Thu nhập: ${context.income_trend === 'increasing' ? '📈 Tăng' : context.income_trend === 'decreasing' ? '📉 Giảm' : '➡️ Ổn định'}
+• Chi tiêu: ${context.expense_trend === 'increasing' ? '📈 Tăng' : context.expense_trend === 'decreasing' ? '📉 Giảm' : '➡️ Ổn định'}
 
-QUỸ DỰ PHÒNG:
-• Hiện tại: ${context.emergency_fund_months.toFixed(1)} tháng chi tiêu
-• Mục tiêu khuyến nghị: 3-6 tháng
-
-TOP DANH MỤC CHI TIÊU:
-${context.top_spending_categories.slice(0, 5).map((cat, i) =>
-  `${i + 1}. ${cat.category}: ${addThousandSeparators(Math.round(cat.amount), ',')} VND (${cat.percentage.toFixed(1)}%)`
-).join('\n')}
+🚨 **QUỸ DỰ PHÒNG:**
+• Hiện tại: **${context.emergency_fund_months.toFixed(1)} tháng** chi tiêu
+• Mục tiêu: 3-6 tháng
+${context.emergency_fund_months < 3 ? '⚠️ **Cảnh báo:** Quỹ dự phòng chưa đủ! Khuyến nghị tạo mục tiêu tiết kiệm trong app.' : '✅ Tốt!'}
 
 ${insights.length > 0 ? `
-CÁC THÔNG TIN QUAN TRỌNG:
+💡 **THÔNG BÁO TỪ APP (insights tự động):**
 ${insights.slice(0, 3).map(insight =>
   `• ${insight.title}: ${insight.message}`
 ).join('\n')}
 ` : ''}
 
 ${last3Months.length >= 2 ? `
-LỊCH SỬ 3 THÁNG:
+📅 **LỊCH SỬ 3 THÁNG (từ dữ liệu app):**
 ${last3Months.map(m =>
   `• Tháng ${m.month}/${m.year}: Thu ${addThousandSeparators(Math.round(m.total_income), ',')} | Chi ${addThousandSeparators(Math.round(m.total_expense), ',')} | Tiết kiệm ${m.savings_rate.toFixed(1)}%`
 ).join('\n')}
 ` : ''}
 
-THÔNG TIN CÁ NHÂN HÓA:
+👤 **HỒ SƠ NGƯỜI DÙNG (từ onboarding):**
 ${userPersonalization ? `
+• Độ tuổi: ${userPersonalization.age_range || 'Chưa cung cấp'}
+• Tình trạng gia đình: ${userPersonalization.family_situation || 'Chưa cung cấp'}
+• Mức thu nhập: ${userPersonalization.income_level || 'Chưa cung cấp'}
 • Mục tiêu tài chính: ${userPersonalization.financial_goals?.join(', ') || 'Chưa xác định'}
-• Kiến thức tài chính: ${userPersonalization.financial_knowledge || 'Chưa xác định'}
-• Mối quan tâm: ${userPersonalization.financial_concerns?.join(', ') || 'Chưa xác định'}
-` : 'Chưa có thông tin'}
+• Kiến thức tài chính: ${getKnowledgeLevel()}
+• Mối quan tâm chính: ${userPersonalization.financial_concerns?.join(', ') || 'Chưa xác định'}
+• Phong cách giao tiếp ưa thích: ${getPersonalizedTone()}
+` : '• Người dùng chưa hoàn thành cá nhân hóa - sử dụng lời khuyên chung'}
 
-CHUẨN MỰC THAM KHẢO:
-• Tỷ lệ tiết kiệm khuyến nghị: 15-20%
-• Quỹ dự phòng mục tiêu: 3-6 tháng chi tiêu
-• Tuân thủ ngân sách: 100% hoặc tốt hơn
+📏 **CHUẨN MỰC THAM KHẢO:**
+• Tỷ lệ tiết kiệm lý tưởng: 15-20% (hiện tại: ${context.savings_rate_current.toFixed(1)}%)
+• Quỹ dự phòng: 3-6 tháng chi tiêu (hiện tại: ${context.emergency_fund_months.toFixed(1)} tháng)
+• Tuân thủ ngân sách: 100%
 
-HÃY:
-1. Đưa ra lời khuyên cụ thể, thiết thực dựa trên dữ liệu
-2. Động viên nhưng trung thực về các vấn đề cần cải thiện
-3. Đề xuất các hành động cụ thể có thể thực hiện
-4. Sử dụng ngôn ngữ thân thiện, dễ hiểu
-5. So sánh với các chuẩn mực để đưa ra góc nhìn rõ ràng
+🎯 **BỐI CẢNH CÂU HỎI:**
+• Khoảng thời gian: **${periodData?.periodLabel || 'tháng này'}**
+• Trọng tâm: **${
+  analysis.focus === 'spending' ? 'Chi tiêu (Transactions - type: expense)' :
+  analysis.focus === 'income' ? 'Thu nhập (Transactions - type: income)' :
+  analysis.focus === 'savings' ? 'Tiết kiệm (Net balance = Thu - Chi)' :
+  analysis.focus === 'budget' ? 'Ngân sách (Budgets feature)' :
+  analysis.focus === 'goal' ? 'Mục tiêu tiết kiệm (Saving Goals feature)' :
+  analysis.focus === 'category' ? 'Phân tích danh mục (Categories breakdown)' :
+  analysis.focus === 'trend' ? 'Xu hướng (Financial metrics & trends)' :
+  analysis.focus === 'health' ? 'Sức khỏe tài chính (Health score & metrics)' : 'Tổng quan'
+}**
+${periodData ? `• Dữ liệu **${periodData.periodLabel}** đã được cung cấp → **ưu tiên dùng dữ liệu này**` : ''}
+${analysis.specificCategory ? `• Danh mục cụ thể: **${analysis.specificCategory}**` : ''}
 
-TRÁNH:
-- Đưa ra lời khuyên chung chung không dựa trên dữ liệu
-- Chỉ liệt kê số liệu mà không giải thích ý nghĩa
-- Sử dụng thuật ngữ phức tạp nếu người dùng là người mới bắt đầu
+✅ **HƯỚNG DẪN TRẢ LỜI (ưu tiên cao):**
+
+1. **Dữ liệu chính xác từ app**:
+   - Chỉ dùng số liệu từ dữ liệu phía trên (${periodData?.periodLabel || 'tháng này'})
+   - Tham chiếu cụ thể: "Theo dữ liệu từ AIncome", "Giao dịch trong app cho thấy"
+   - Trích dẫn số liệu cụ thể: thu nhập, chi tiêu, số giao dịch, danh mục
+
+2. **Tập trung đúng focus**:
+   ${analysis.focus === 'spending' ? '→ Phân tích CHI TIÊU: danh mục chi nhiều nhất, chi tiêu bất thường, so với ngân sách' : ''}
+   ${analysis.focus === 'income' ? '→ Phân tích THU NHẬP: nguồn thu, tính ổn định, tăng/giảm so với trước' : ''}
+   ${analysis.focus === 'savings' ? '→ Phân tích TIẾT KIỆM: số tiền tiết kiệm được, tỷ lệ tiết kiệm, so với mục tiêu' : ''}
+   ${analysis.focus === 'budget' ? '→ Phân tích NGÂN SÁCH: budgets_exceeded, budgets_warning, gợi ý điều chỉnh trong app' : ''}
+   ${analysis.focus === 'goal' ? '→ Phân tích MỤC TIÊU: goals_on_track, goals_behind, khuyến nghị tạo/cập nhật mục tiêu' : ''}
+   ${analysis.focus === 'category' ? '→ Phân tích DANH MỤC: top_spending_categories, phân bổ chi tiêu, đề xuất tối ưu' : ''}
+   ${analysis.focus === 'trend' ? '→ Phân tích XU HƯỚNG: income_trend, expense_trend, so sánh 3 tháng, dự đoán' : ''}
+   ${analysis.focus === 'health' ? '→ Phân tích SỨC KHỎE: financial_health_score, các chỉ số chính, hành động cải thiện' : ''}
+
+3. **Hành động trong app**:
+   - Gợi ý tính năng cụ thể: "Tạo ngân sách trong tab Budget", "Đặt mục tiêu trong tab Goals"
+   - Tham chiếu màn hình: "Xem chi tiết trong Analysis", "Kiểm tra trong All Transactions"
+   - Hướng dẫn cụ thể: "Nhấn + trong Budget screen để tạo ngân sách mới"
+
+4. **Cá nhân hóa theo user**:
+   - Phong cách: ${getPersonalizedTone()}
+   - Mức độ: ${getKnowledgeLevel()}
+   - Mục tiêu: ${userPersonalization?.financial_goals?.join(', ') || 'Chưa xác định'}
+   - Mối quan tâm: ${userPersonalization?.financial_concerns?.join(', ') || 'Chưa xác định'}
+
+5. **Format rõ ràng**:
+   - **Bold** cho số liệu quan trọng
+   - Emoji phù hợp với nội dung
+   - Bullet points cho danh sách
+   - Ngắn gọn, dễ đọc trên mobile
+
+❌ **TUYỆT ĐỐI TRÁNH:**
+- ❌ Lời khuyên chung chung từ Internet (không dựa trên dữ liệu app)
+- ❌ Số liệu sai thời gian (hỏi tuần này mà đưa số liệu tháng)
+- ❌ Bỏ qua focus của câu hỏi (hỏi chi tiêu mà nói về thu nhập)
+- ❌ Không đề xuất hành động cụ thể trong app
+- ❌ Sử dụng ngôn ngữ không phù hợp với user preferences
 `;
 
     // Call Gemini for intelligent response with comprehensive financial context
     const response = await chatWithGemini(
       question,
       [],
-      {
-        ...userPersonalization,
-        has_completed_personalization: userPersonalization?.has_completed_personalization || false,
-      },
+      userPersonalization,
       systemPrompt // Pass the comprehensive financial data to the AI
     );
 

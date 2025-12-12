@@ -13,6 +13,8 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../../stores/authStore';
+import { useThemeStore } from '../../stores/themeStore';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { supabase } from '../../services/supabase';
 
 const CURRENCIES = [
@@ -42,15 +44,165 @@ const LANGUAGES = [
 const SettingsScreen: React.FC = () => {
   const navigation = useNavigation();
   const { user } = useAuthStore();
+  const { theme, isDark, setTheme: setAppTheme } = useThemeStore();
 
   const [currency, setCurrency] = useState('VND');
   const [language, setLanguage] = useState('EN');
-  const [theme, setTheme] = useState('light');
+  const [themeMode, setThemeMode] = useState<'light' | 'dark'>(isDark ? 'dark' : 'light');
   const [notifications, setNotifications] = useState(true);
   const [budgetAlerts, setBudgetAlerts] = useState(true);
   const [goalReminders, setGoalReminders] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+
+  const styles = useThemedStyles((theme) => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: theme.colors.background,
+    },
+    scrollContent: {
+      padding: theme.spacing.lg,
+      paddingBottom: 40,
+    },
+    section: {
+      marginBottom: theme.spacing.xxl,
+    },
+    sectionTitle: {
+      fontSize: theme.fontSize.lg,
+      fontWeight: theme.fontWeight.bold,
+      color: theme.colors.textPrimary,
+      marginBottom: 4,
+    },
+    sectionDescription: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textSecondary,
+      marginBottom: theme.spacing.lg,
+    },
+    optionsList: {
+      gap: theme.spacing.sm,
+    },
+    optionItem: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.lg,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      borderWidth: 2,
+      borderColor: 'transparent',
+    },
+    optionItemSelected: {
+      borderColor: theme.colors.primary,
+      backgroundColor: theme.colors.primaryLight,
+    },
+    optionLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    optionSymbol: {
+      fontSize: 24,
+      marginRight: theme.spacing.md,
+    },
+    optionTitle: {
+      fontSize: theme.fontSize.md,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.textPrimary,
+    },
+    optionSubtitle: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textSecondary,
+    },
+    checkmark: {
+      fontSize: 20,
+      color: theme.colors.primary,
+      fontWeight: theme.fontWeight.bold,
+    },
+    themeOptions: {
+      flexDirection: 'row',
+      gap: theme.spacing.md,
+    },
+    themeCard: {
+      flex: 1,
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.xl,
+      alignItems: 'center',
+      borderWidth: 2,
+      borderColor: 'transparent',
+      position: 'relative',
+    },
+    themeCardSelected: {
+      borderColor: theme.colors.primary,
+      backgroundColor: theme.colors.primaryLight,
+    },
+    themeIcon: {
+      fontSize: 32,
+      marginBottom: theme.spacing.sm,
+    },
+    themeLabel: {
+      fontSize: theme.fontSize.sm,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.textPrimary,
+    },
+    themeCheck: {
+      position: 'absolute',
+      top: 8,
+      right: 8,
+      fontSize: 16,
+      color: theme.colors.primary,
+      fontWeight: theme.fontWeight.bold,
+    },
+    switchItem: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.lg,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: theme.spacing.sm,
+    },
+    switchLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+      marginRight: theme.spacing.md,
+    },
+    switchIcon: {
+      fontSize: 24,
+      marginRight: theme.spacing.md,
+    },
+    switchTitle: {
+      fontSize: theme.fontSize.md,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.textPrimary,
+      marginBottom: 2,
+    },
+    switchSubtitle: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textSecondary,
+    },
+    savingCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.colors.primaryLight,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.md,
+      gap: theme.spacing.sm,
+    },
+    savingText: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.primary,
+      fontWeight: theme.fontWeight.semibold,
+    },
+  }));
 
   useEffect(() => {
     loadSettings();
@@ -70,7 +222,7 @@ const SettingsScreen: React.FC = () => {
       if (data) {
         setCurrency(data.currency || 'VND');
         setLanguage(data.language || 'EN');
-        setTheme(data.theme || 'light');
+        setThemeMode(data.theme || 'light');
         setNotifications(data.notifications ?? true);
         setBudgetAlerts(data.budget_alerts ?? true);
         setGoalReminders(data.goal_reminders ?? true);
@@ -116,8 +268,11 @@ const SettingsScreen: React.FC = () => {
     );
   };
 
-  const handleThemeChange = (newTheme: string) => {
-    setTheme(newTheme);
+  const handleThemeChange = async (newTheme: 'light' | 'dark') => {
+    setThemeMode(newTheme);
+    // Update app theme immediately
+    await setAppTheme(newTheme);
+    // Also save to database for persistence
     saveSettings({ theme: newTheme });
   };
 
@@ -139,7 +294,7 @@ const SettingsScreen: React.FC = () => {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3B82F6" />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
   }
@@ -207,43 +362,31 @@ const SettingsScreen: React.FC = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Appearance</Text>
           <Text style={styles.sectionDescription}>
-            Customize the look and feel of the app
+            Switch between light and dark mode
           </Text>
           <View style={styles.themeOptions}>
             <TouchableOpacity
               style={[
                 styles.themeCard,
-                theme === 'light' && styles.themeCardSelected,
+                themeMode === 'light' && styles.themeCardSelected,
               ]}
               onPress={() => handleThemeChange('light')}
             >
               <Text style={styles.themeIcon}>☀️</Text>
-              <Text style={styles.themeLabel}>Light</Text>
-              {theme === 'light' && <Text style={styles.themeCheck}>✓</Text>}
+              <Text style={styles.themeLabel}>Light Mode</Text>
+              {themeMode === 'light' && <Text style={styles.themeCheck}>✓</Text>}
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[
                 styles.themeCard,
-                theme === 'dark' && styles.themeCardSelected,
+                themeMode === 'dark' && styles.themeCardSelected,
               ]}
               onPress={() => handleThemeChange('dark')}
             >
               <Text style={styles.themeIcon}>🌙</Text>
-              <Text style={styles.themeLabel}>Dark</Text>
-              {theme === 'dark' && <Text style={styles.themeCheck}>✓</Text>}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.themeCard,
-                theme === 'auto' && styles.themeCardSelected,
-              ]}
-              onPress={() => handleThemeChange('auto')}
-            >
-              <Text style={styles.themeIcon}>🔄</Text>
-              <Text style={styles.themeLabel}>Auto</Text>
-              {theme === 'auto' && <Text style={styles.themeCheck}>✓</Text>}
+              <Text style={styles.themeLabel}>Dark Mode</Text>
+              {themeMode === 'dark' && <Text style={styles.themeCheck}>✓</Text>}
             </TouchableOpacity>
           </View>
         </View>
@@ -268,8 +411,8 @@ const SettingsScreen: React.FC = () => {
             <Switch
               value={notifications}
               onValueChange={handleNotificationsChange}
-              trackColor={{ false: '#E5E7EB', true: '#93C5FD' }}
-              thumbColor={notifications ? '#3B82F6' : '#F3F4F6'}
+              trackColor={{ false: theme.colors.border, true: theme.colors.primaryLight }}
+              thumbColor={notifications ? theme.colors.primary : theme.colors.surfaceHover}
             />
           </View>
 
@@ -286,8 +429,8 @@ const SettingsScreen: React.FC = () => {
             <Switch
               value={budgetAlerts}
               onValueChange={handleBudgetAlertsChange}
-              trackColor={{ false: '#E5E7EB', true: '#93C5FD' }}
-              thumbColor={budgetAlerts ? '#3B82F6' : '#F3F4F6'}
+              trackColor={{ false: theme.colors.border, true: theme.colors.primaryLight }}
+              thumbColor={budgetAlerts ? theme.colors.primary : theme.colors.surfaceHover}
               disabled={!notifications}
             />
           </View>
@@ -305,8 +448,8 @@ const SettingsScreen: React.FC = () => {
             <Switch
               value={goalReminders}
               onValueChange={handleGoalRemindersChange}
-              trackColor={{ false: '#E5E7EB', true: '#93C5FD' }}
-              thumbColor={goalReminders ? '#3B82F6' : '#F3F4F6'}
+              trackColor={{ false: theme.colors.border, true: theme.colors.primaryLight }}
+              thumbColor={goalReminders ? theme.colors.primary : theme.colors.surfaceHover}
               disabled={!notifications}
             />
           </View>
@@ -315,7 +458,7 @@ const SettingsScreen: React.FC = () => {
         {/* Info Card */}
         {isSaving && (
           <View style={styles.savingCard}>
-            <ActivityIndicator size="small" color="#3B82F6" />
+            <ActivityIndicator size="small" color={theme.colors.primary} />
             <Text style={styles.savingText}>Saving changes...</Text>
           </View>
         )}
@@ -323,154 +466,5 @@ const SettingsScreen: React.FC = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
-  },
-  section: {
-    marginBottom: 32,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1F2937',
-    marginBottom: 4,
-  },
-  sectionDescription: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginBottom: 16,
-  },
-  optionsList: {
-    gap: 8,
-  },
-  optionItem: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  optionItemSelected: {
-    borderColor: '#3B82F6',
-    backgroundColor: '#EFF6FF',
-  },
-  optionLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  optionSymbol: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  optionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
-  },
-  optionSubtitle: {
-    fontSize: 13,
-    color: '#6B7280',
-  },
-  checkmark: {
-    fontSize: 20,
-    color: '#3B82F6',
-    fontWeight: '700',
-  },
-  themeOptions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  themeCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 20,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'transparent',
-    position: 'relative',
-  },
-  themeCardSelected: {
-    borderColor: '#3B82F6',
-    backgroundColor: '#EFF6FF',
-  },
-  themeIcon: {
-    fontSize: 32,
-    marginBottom: 8,
-  },
-  themeLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1F2937',
-  },
-  themeCheck: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    fontSize: 16,
-    color: '#3B82F6',
-    fontWeight: '700',
-  },
-  switchItem: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  switchLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    marginRight: 12,
-  },
-  switchIcon: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  switchTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 2,
-  },
-  switchSubtitle: {
-    fontSize: 13,
-    color: '#6B7280',
-  },
-  savingCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#EFF6FF',
-    borderRadius: 12,
-    padding: 12,
-    gap: 8,
-  },
-  savingText: {
-    fontSize: 14,
-    color: '#3B82F6',
-    fontWeight: '600',
-  },
-});
 
 export default SettingsScreen;

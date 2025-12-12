@@ -19,16 +19,18 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { HomeStackParamList } from '../../navigation/types';
 import { supabase } from '../../services/supabase';
 import { useAuthStore } from '../../stores/authStore';
+import { useThemeStore } from '../../stores/themeStore';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { useChatStore } from '../../stores/chatStore';
 import { Category } from '../../types';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT, SHADOWS } from '../../theme/modernTheme';
 import { refreshMyAnalytics } from '../../services/financialAnalyticsService';
+import { checkSpendingWarning } from '../../services/goalAllocationService';
+import SpendingWarningModal from '../../components/goals/SpendingWarningModal';
 import {
   validateTransactionAmount,
   validateTransactionDate,
   validateExpenseAgainstBalance,
-  validateExpenseAgainstGoals,
   validateLargeTransaction,
   checkDuplicateTransaction,
   validateTransactionNote,
@@ -49,25 +51,274 @@ const AddTransactionScreen: React.FC = () => {
   const navigation = useNavigation<AddTransactionScreenNavigationProp>();
   const route = useRoute<AddTransactionScreenRouteProp>();
   const { user } = useAuthStore();
-  const { clearChat } = useChatStore();
+  const { theme } = useThemeStore();
 
   const transactionId = route.params?.transactionId;
   const initialType = route.params?.initialType;
+  const fromPending = route.params?.fromPending;
   const isEditMode = !!transactionId;
 
-  // Tab state
+  // Tab state - force 'form' tab when editing from pending transaction
   const [activeTab, setActiveTab] = useState<'form' | 'chat'>('form');
 
-  const [type, setType] = useState<'income' | 'expense'>(initialType || 'expense');
-  const [amount, setAmount] = useState('');
+  const [type, setType] = useState<'income' | 'expense'>(fromPending?.type || initialType || 'expense');
+  const [amount, setAmount] = useState(fromPending?.amount.toString() || '');
   const [name, setName] = useState(''); // Transaction name/title
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(fromPending?.categoryId || null);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [note, setNote] = useState('');
-  const [date, setDate] = useState(new Date());
+  const [note, setNote] = useState(fromPending?.note || '');
+  const [date, setDate] = useState(fromPending?.date ? new Date(fromPending.date) : new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingCategories, setIsFetchingCategories] = useState(true);
+
+  // Spending warning modal state
+  const [showSpendingWarning, setShowSpendingWarning] = useState(false);
+  const [spendingWarningData, setSpendingWarningData] = useState({
+    netBalanceAfter: 0,
+    allocatedBalance: 0,
+    deficit: 0,
+  });
+  const [currency, setCurrency] = useState('VND');
+
+  const styles = useThemedStyles((theme) => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.surface,
+    },
+    tabContainer: {
+      flexDirection: 'row',
+      backgroundColor: theme.colors.surfaceHover,
+      marginHorizontal: theme.spacing.lg,
+      marginBottom: theme.spacing.md,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.xs,
+    },
+    tab: {
+      flex: 1,
+      paddingVertical: theme.spacing.sm,
+      alignItems: 'center',
+      borderRadius: theme.borderRadius.md,
+    },
+    tabActive: {
+      backgroundColor: theme.colors.surface,
+      ...theme.shadows.sm,
+    },
+    tabText: {
+      fontSize: theme.fontSize.md,
+      fontWeight: theme.fontWeight.medium,
+      color: theme.colors.textSecondary,
+    },
+    tabTextActive: {
+      color: theme.colors.primary,
+      fontWeight: theme.fontWeight.semibold,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: theme.colors.surface,
+    },
+    loadingText: {
+      marginTop: theme.spacing.md,
+      fontSize: theme.fontSize.md,
+      color: theme.colors.textSecondary,
+    },
+    scrollContent: {
+      padding: theme.spacing.lg,
+      paddingBottom: 40,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: theme.spacing.xxl,
+      paddingTop: theme.spacing.md,
+      paddingBottom: theme.spacing.sm,
+    },
+    cancelButton: {
+      fontSize: theme.fontSize.md,
+      color: theme.colors.textSecondary,
+    },
+    headerTitle: {
+      fontSize: theme.fontSize.lg,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.textPrimary,
+    },
+    saveButton: {
+      fontSize: theme.fontSize.md,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.primary,
+    },
+    saveButtonDisabled: {
+      color: theme.colors.textTertiary,
+    },
+    typeToggle: {
+      flexDirection: 'row',
+      backgroundColor: theme.colors.surfaceHover,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.xs,
+      marginBottom: theme.spacing.xxl,
+      gap: theme.spacing.sm,
+    },
+    typeButtonContainer: {
+      flex: 1,
+    },
+    typeButton: {
+      paddingVertical: theme.spacing.md,
+      borderRadius: theme.borderRadius.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+      ...theme.shadows.sm,
+    },
+    typeButtonInactive: {
+      paddingVertical: theme.spacing.md,
+      borderRadius: theme.borderRadius.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'transparent',
+    },
+    typeButtonText: {
+      fontSize: theme.fontSize.md,
+      fontWeight: theme.fontWeight.medium,
+      color: theme.colors.textSecondary,
+    },
+    typeButtonTextActive: {
+      fontSize: theme.fontSize.md,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.textWhite,
+    },
+    section: {
+      marginBottom: theme.spacing.xxl,
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: theme.spacing.md,
+    },
+    sectionLabel: {
+      fontSize: theme.fontSize.sm,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.textSecondary,
+    },
+    addCategoryButton: {
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.xs,
+      backgroundColor: theme.colors.primaryLight,
+      borderRadius: theme.borderRadius.sm,
+      borderWidth: 1,
+      borderColor: theme.colors.primary,
+    },
+    addCategoryButtonText: {
+      fontSize: theme.fontSize.xs,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.primary,
+    },
+    amountInput: {
+      backgroundColor: theme.colors.surfaceHover,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.lg,
+      fontSize: 32,
+      fontWeight: theme.fontWeight.extrabold,
+      color: theme.colors.textPrimary,
+      textAlign: 'center',
+    },
+    nameInput: {
+      backgroundColor: theme.colors.surfaceHover,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.lg,
+      fontSize: theme.fontSize.md,
+      color: theme.colors.textPrimary,
+    },
+    categoriesGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginHorizontal: -4,
+    },
+    categoryCard: {
+      width: '23%',
+      aspectRatio: 1,
+      margin: '1%',
+      backgroundColor: theme.colors.surfaceHover,
+      borderWidth: 2,
+      borderColor: theme.colors.border,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.sm,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    categoryCardSelected: {
+      backgroundColor: theme.colors.primaryLight,
+      borderWidth: 2,
+    },
+    categoryIcon: {
+      fontSize: 28,
+      marginBottom: 4,
+    },
+    categoryName: {
+      fontSize: 11,
+      fontWeight: theme.fontWeight.medium,
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+    },
+    noCategoriesContainer: {
+      backgroundColor: theme.colors.surfaceHover,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.xxl,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+    },
+    noCategoriesText: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+      marginBottom: theme.spacing.lg,
+    },
+    addCategoryLargeButton: {
+      backgroundColor: theme.colors.primary,
+      paddingHorizontal: theme.spacing.xl,
+      paddingVertical: theme.spacing.md,
+      borderRadius: theme.borderRadius.sm,
+    },
+    addCategoryLargeButtonText: {
+      fontSize: theme.fontSize.sm,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.white,
+    },
+    dateButton: {
+      backgroundColor: theme.colors.surfaceHover,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.lg,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    dateButtonText: {
+      fontSize: theme.fontSize.md,
+      color: theme.colors.textPrimary,
+    },
+    dateIcon: {
+      fontSize: 20,
+    },
+    noteInput: {
+      backgroundColor: theme.colors.surfaceHover,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.lg,
+      fontSize: theme.fontSize.md,
+      color: theme.colors.textPrimary,
+      minHeight: 100,
+    },
+  }));
 
   // Fetch user categories
   useEffect(() => {
@@ -128,6 +379,25 @@ const AddTransactionScreen: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  // Fetch user currency
+  useEffect(() => {
+    const fetchUserCurrency = async () => {
+      if (!user) return;
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('currency')
+          .eq('id', user.id)
+          .single();
+        if (error) throw error;
+        if (data) setCurrency(data.currency);
+      } catch (error: any) {
+        console.error('Error fetching currency:', error);
+      }
+    };
+    fetchUserCurrency();
+  }, [user]);
 
   // Refetch categories when type changes
   useEffect(() => {
@@ -323,22 +593,17 @@ const AddTransactionScreen: React.FC = () => {
           return;
         }
 
-        // Check if expense affects saving goals
-        const goalValidation = await validateExpenseAgainstGoals(
-          user.id,
-          amountNum,
-          isEditMode,
-          originalAmount
-        );
-
-        if (!goalValidation.isValid) {
+        // Check if expense would reduce net balance below allocated balance (NEW SYSTEM)
+        const warning = await checkSpendingWarning(user.id, amountNum, isEditMode, originalAmount);
+        if (warning.shouldWarn) {
+          setSpendingWarningData({
+            netBalanceAfter: warning.netBalanceAfter,
+            allocatedBalance: warning.allocatedBalance,
+            deficit: warning.deficit,
+          });
+          setShowSpendingWarning(true);
           setIsLoading(false);
-          showValidationAlert(
-            goalValidation,
-            () => proceedWithSave(), // Continue
-            () => setIsLoading(false) // Cancel
-          );
-          return;
+          return; // Stop here, let user decide via modal
         }
       }
 
@@ -439,6 +704,22 @@ const AddTransactionScreen: React.FC = () => {
           await checkBudgetImpact(selectedCategory, Number(amount));
         }
 
+        // If this transaction came from a pending transaction, delete it from pending_transactions
+        if (fromPending) {
+          console.log('🗑️ Deleting pending transaction:', fromPending.pendingId);
+          const { error: deleteError } = await supabase
+            .from('pending_transactions')
+            .delete()
+            .eq('id', fromPending.pendingId);
+
+          if (deleteError) {
+            console.error('Error deleting pending transaction:', deleteError);
+            // Don't fail the whole operation if deletion fails
+          } else {
+            console.log('✅ Pending transaction deleted successfully');
+          }
+        }
+
         Alert.alert('Success', 'Transaction added successfully', [
           { text: 'OK', onPress: () => navigation.goBack() }
         ]);
@@ -456,14 +737,51 @@ const AddTransactionScreen: React.FC = () => {
     // No navigation - they can continue chatting or add more transactions
   };
 
-  // Clear chat when leaving screen
-  useFocusEffect(
-    React.useCallback(() => {
-      return () => {
-        clearChat();
-      };
-    }, [])
-  );
+  // Handle edit transaction from chat - switch to form tab and pre-fill
+  const handleEditFromChat = (transaction: any) => {
+    // Pre-fill form fields with transaction data
+    setType(transaction.type);
+    setAmount(transaction.amount.toString());
+    setSelectedCategory(transaction.category_id || null);
+    setNote(transaction.note || '');
+    setDate(transaction.date ? new Date(transaction.date) : new Date());
+
+    // Switch to form tab
+    setActiveTab('form');
+  };
+
+  // Handle create category from chat - navigate to category form
+  const handleCreateCategory = (suggestedName: string, type: 'income' | 'expense') => {
+    // Navigate to ProfileTab -> Categories -> CategoryForm with suggested name
+    navigation.navigate('ProfileTab', {
+      screen: 'CategoryForm',
+      params: {
+        suggestedName: suggestedName,
+        type: type,
+      },
+    } as any);
+  };
+
+  // Spending Warning Modal Handlers
+  const handleGoToGoals = () => {
+    setShowSpendingWarning(false);
+    navigation.navigate('Budget', {
+      screen: 'SavingsTab'
+    } as any);
+  };
+
+  const handleContinueAnyway = async () => {
+    setShowSpendingWarning(false);
+    await proceedWithSave();
+  };
+
+  const handleCancelTransaction = () => {
+    setShowSpendingWarning(false);
+    setIsLoading(false);
+  };
+
+  // Note: Chat history is now persisted across navigation
+  // The conversation will remain even when navigating away and coming back
 
   // Don't show chat tab in edit mode
   const showChatTab = !isEditMode;
@@ -471,7 +789,7 @@ const AddTransactionScreen: React.FC = () => {
   if (isLoading && isEditMode) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3B82F6" />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
         <Text style={styles.loadingText}>Loading transaction...</Text>
       </SafeAreaView>
     );
@@ -538,7 +856,7 @@ const AddTransactionScreen: React.FC = () => {
           >
             {type === 'income' ? (
               <LinearGradient
-                colors={[COLORS.success, COLORS.successDark]}
+                colors={[theme.colors.success, theme.colors.successDark]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.typeButton}
@@ -559,7 +877,7 @@ const AddTransactionScreen: React.FC = () => {
           >
             {type === 'expense' ? (
               <LinearGradient
-                colors={[COLORS.danger, COLORS.dangerDark]}
+                colors={[theme.colors.danger, theme.colors.dangerDark]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.typeButton}
@@ -580,7 +898,7 @@ const AddTransactionScreen: React.FC = () => {
           <TextInput
             style={styles.amountInput}
             placeholder="0"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={theme.colors.textTertiary}
             value={amount}
             onChangeText={setAmount}
             keyboardType="numeric"
@@ -594,7 +912,7 @@ const AddTransactionScreen: React.FC = () => {
           <TextInput
             style={styles.nameInput}
             placeholder="e.g., Grocery Shopping, Monthly Salary"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={theme.colors.textTertiary}
             value={name}
             onChangeText={setName}
             editable={!isLoading}
@@ -611,7 +929,7 @@ const AddTransactionScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
           {isFetchingCategories ? (
-            <ActivityIndicator size="small" color="#3B82F6" style={{ marginTop: 12 }} />
+            <ActivityIndicator size="small" color={theme.colors.primary} style={{ marginTop: 12 }} />
           ) : categories.length === 0 ? (
             <View style={styles.noCategoriesContainer}>
               <Text style={styles.noCategoriesText}>
@@ -678,7 +996,7 @@ const AddTransactionScreen: React.FC = () => {
           <TextInput
             style={styles.noteInput}
             placeholder="Add a note..."
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={theme.colors.textTertiary}
             value={note}
             onChangeText={setNote}
             multiline
@@ -689,249 +1007,26 @@ const AddTransactionScreen: React.FC = () => {
         </View>
         </ScrollView>
       ) : (
-        <ChatInterface onTransactionSaved={handleTransactionSaved} />
+        <ChatInterface
+          onTransactionSaved={handleTransactionSaved}
+          onEditTransaction={handleEditFromChat}
+          onCreateCategory={handleCreateCategory}
+        />
       )}
+
+      {/* Spending Warning Modal */}
+      <SpendingWarningModal
+        visible={showSpendingWarning}
+        netBalanceAfter={spendingWarningData.netBalanceAfter}
+        allocatedBalance={spendingWarningData.allocatedBalance}
+        deficit={spendingWarningData.deficit}
+        currency={currency}
+        onClose={handleCancelTransaction}
+        onGoToGoals={handleGoToGoals}
+        onContinueAnyway={handleContinueAnyway}
+      />
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.surfaceHover,
-    marginHorizontal: SPACING.lg,
-    marginBottom: SPACING.md,
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.xs,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: SPACING.sm,
-    alignItems: 'center',
-    borderRadius: BORDER_RADIUS.md,
-  },
-  tabActive: {
-    backgroundColor: COLORS.surface,
-    ...SHADOWS.sm,
-  },
-  tabText: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.medium,
-    color: COLORS.textSecondary,
-  },
-  tabTextActive: {
-    color: COLORS.primary,
-    fontWeight: FONT_WEIGHT.semibold,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#6B7280',
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-    paddingTop: 12,
-    paddingBottom: 8,
-  },
-  cancelButton: {
-    fontSize: 16,
-    color: '#6B7280',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
-  },
-  saveButton: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#3B82F6',
-  },
-  saveButtonDisabled: {
-    color: '#9CA3AF',
-  },
-  typeToggle: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.surfaceHover,
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.xs,
-    marginBottom: SPACING.xxl,
-    gap: SPACING.sm,
-  },
-  typeButtonContainer: {
-    flex: 1,
-  },
-  typeButton: {
-    paddingVertical: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...SHADOWS.sm,
-  },
-  typeButtonInactive: {
-    paddingVertical: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'transparent',
-  },
-  typeButtonText: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.medium,
-    color: COLORS.textSecondary,
-  },
-  typeButtonTextActive: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.textWhite,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  sectionLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-  },
-  addCategoryButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: '#EFF6FF',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#3B82F6',
-  },
-  addCategoryButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#3B82F6',
-  },
-  amountInput: {
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    textAlign: 'center',
-  },
-  nameInput: {
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#1F2937',
-  },
-  categoriesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginHorizontal: -4,
-  },
-  categoryCard: {
-    width: '23%',
-    aspectRatio: 1,
-    margin: '1%',
-    backgroundColor: '#F9FAFB',
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    padding: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  categoryCardSelected: {
-    backgroundColor: '#EFF6FF',
-    borderWidth: 2,
-  },
-  categoryIcon: {
-    fontSize: 28,
-    marginBottom: 4,
-  },
-  categoryName: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#374151',
-    textAlign: 'center',
-  },
-  noCategoriesContainer: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    padding: 24,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  noCategoriesText: {
-    fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  addCategoryLargeButton: {
-    backgroundColor: '#3B82F6',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  addCategoryLargeButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  dateButton: {
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    padding: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  dateButtonText: {
-    fontSize: 16,
-    color: '#1F2937',
-  },
-  dateIcon: {
-    fontSize: 20,
-  },
-  noteInput: {
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#1F2937',
-    minHeight: 100,
-  },
-});
 
 export default AddTransactionScreen;

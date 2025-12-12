@@ -20,8 +20,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { BarChart, PieChart, LineChart, ProgressChart } from 'react-native-chart-kit';
 import { supabase } from '../../services/supabase';
 import { useAuthStore } from '../../stores/authStore';
+import { useThemeStore } from '../../stores/themeStore';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { formatCurrency } from '../../utils/helpers';
-import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT, SHADOWS } from '../../theme/modernTheme';
 import {
   startOfDay,
   endOfDay,
@@ -93,6 +94,7 @@ interface InsightData {
 
 const EnhancedAnalysisScreen: React.FC = () => {
   const { user } = useAuthStore();
+  const { theme } = useThemeStore();
 
   // State
   const [selectedFilter, setSelectedFilter] = useState<TimeFilter>('month');
@@ -130,6 +132,427 @@ const EnhancedAnalysisScreen: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<CategoryData | null>(null);
   const [categoryTransactions, setCategoryTransactions] = useState<Transaction[]>([]);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+
+  const styles = useThemedStyles((theme) => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    loadingText: {
+      marginTop: theme.spacing.md,
+      fontSize: theme.fontSize.md,
+      color: theme.colors.textSecondary,
+    },
+    headerGradient: {
+      paddingTop: theme.spacing.md,
+      paddingBottom: theme.spacing.lg,
+      ...theme.shadows.md,
+    },
+    headerContent: {
+      paddingHorizontal: theme.spacing.lg,
+    },
+    headerLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    iconContainer: {
+      width: 56,
+      height: 56,
+      borderRadius: theme.borderRadius.xl,
+      backgroundColor: theme.colors.successLight,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: theme.spacing.md,
+      ...theme.shadows.sm,
+    },
+    headerIcon: {
+      fontSize: 28,
+    },
+    headerTextContainer: {
+      flex: 1,
+    },
+    headerTitle: {
+      fontSize: theme.fontSize.xxxl,
+      fontWeight: theme.fontWeight.extrabold,
+      color: theme.colors.textPrimary,
+      marginBottom: theme.spacing.xs,
+    },
+    headerSubtitle: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textSecondary,
+      fontWeight: theme.fontWeight.medium,
+    },
+    filterContainer: {
+      backgroundColor: theme.colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+      paddingVertical: 8,
+      maxHeight: 50,
+    },
+    filterContent: {
+      paddingHorizontal: theme.spacing.lg,
+      paddingVertical: 0,
+      alignItems: 'center',
+    },
+    filterChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      marginHorizontal: 4,
+      borderRadius: 10,
+      backgroundColor: theme.colors.surfaceHover,
+      borderWidth: 1.5,
+      borderColor: theme.colors.border,
+      minWidth: 60,
+      height: 32,
+    },
+    filterChipActive: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+    },
+    filterEmoji: {
+      fontSize: 12,
+      marginRight: 3,
+    },
+    filterLabel: {
+      fontSize: 12,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.textSecondary,
+      includeFontPadding: false,
+      textAlignVertical: 'center',
+    },
+    filterLabelActive: {
+      color: theme.colors.textWhite,
+    },
+    content: {
+      flex: 1,
+    },
+    summaryGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      padding: theme.spacing.lg,
+      gap: theme.spacing.md,
+    },
+    summaryCard: {
+      flex: 1,
+      minWidth: (screenWidth - 56) / 3,
+      padding: theme.spacing.lg,
+      borderRadius: theme.borderRadius.lg,
+      backgroundColor: theme.colors.surface,
+      ...theme.shadows.md,
+    },
+    incomeCard: {
+      borderLeftWidth: 4,
+      borderLeftColor: theme.colors.success,
+    },
+    expenseCard: {
+      borderLeftWidth: 4,
+      borderLeftColor: theme.colors.danger,
+    },
+    balanceCard: {
+      borderLeftWidth: 4,
+      borderLeftColor: theme.colors.primary,
+    },
+    summaryLabel: {
+      fontSize: theme.fontSize.xs,
+      color: theme.colors.textSecondary,
+      marginBottom: theme.spacing.sm,
+    },
+    summaryValue: {
+      fontSize: theme.fontSize.lg,
+      fontWeight: theme.fontWeight.bold,
+      color: theme.colors.textPrimary,
+    },
+    insightsCard: {
+      marginHorizontal: theme.spacing.lg,
+      marginBottom: theme.spacing.lg,
+      padding: theme.spacing.xl,
+      borderRadius: theme.borderRadius.lg,
+      backgroundColor: theme.colors.surface,
+      ...theme.shadows.md,
+    },
+    sectionTitle: {
+      fontSize: theme.fontSize.lg,
+      fontWeight: theme.fontWeight.bold,
+      color: theme.colors.textPrimary,
+      marginBottom: theme.spacing.lg,
+    },
+    insightRow: {
+      flexDirection: 'row',
+      marginBottom: theme.spacing.lg,
+    },
+    insightItem: {
+      flex: 1,
+    },
+    insightLabel: {
+      fontSize: theme.fontSize.xs,
+      color: theme.colors.textSecondary,
+      marginBottom: 4,
+    },
+    insightValue: {
+      fontSize: theme.fontSize.md,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.textPrimary,
+    },
+    comparisonBadge: {
+      marginTop: theme.spacing.sm,
+      paddingVertical: theme.spacing.sm,
+      paddingHorizontal: theme.spacing.md,
+      borderRadius: theme.borderRadius.md,
+      backgroundColor: theme.colors.surfaceHover,
+    },
+    comparisonText: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+    },
+    chartCard: {
+      marginHorizontal: theme.spacing.lg,
+      marginBottom: theme.spacing.lg,
+      padding: theme.spacing.xl,
+      borderRadius: theme.borderRadius.lg,
+      backgroundColor: theme.colors.surface,
+      ...theme.shadows.md,
+    },
+    categoryItem: {
+      marginBottom: theme.spacing.lg,
+    },
+    categoryHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: theme.spacing.sm,
+    },
+    categoryInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    categoryIcon: {
+      fontSize: 24,
+      marginRight: theme.spacing.md,
+    },
+    categoryName: {
+      fontSize: theme.fontSize.md,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.textPrimary,
+    },
+    categoryCount: {
+      fontSize: theme.fontSize.xs,
+      color: theme.colors.textTertiary,
+      marginTop: 2,
+    },
+    categoryAmount: {
+      alignItems: 'flex-end',
+    },
+    categoryValue: {
+      fontSize: theme.fontSize.md,
+      fontWeight: theme.fontWeight.bold,
+      color: theme.colors.textPrimary,
+    },
+    categoryPercentage: {
+      fontSize: theme.fontSize.xs,
+      color: theme.colors.textSecondary,
+      marginTop: 2,
+    },
+    progressBarContainer: {
+      height: 8,
+      backgroundColor: theme.colors.surfaceHover,
+      borderRadius: 4,
+      overflow: 'hidden',
+    },
+    progressBarFill: {
+      height: '100%',
+      borderRadius: 4,
+    },
+    chart: {
+      marginVertical: theme.spacing.sm,
+      borderRadius: theme.borderRadius.lg,
+    },
+    emptyState: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 60,
+    },
+    emptyEmoji: {
+      fontSize: 64,
+      marginBottom: theme.spacing.lg,
+    },
+    emptyTitle: {
+      fontSize: theme.fontSize.lg,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.textPrimary,
+      marginBottom: theme.spacing.sm,
+    },
+    emptySubtitle: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textSecondary,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'flex-end',
+    },
+    modalContent: {
+      backgroundColor: theme.colors.surface,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      maxHeight: '80%',
+      paddingBottom: 32,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: theme.spacing.xl,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    modalTitleContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    modalIcon: {
+      fontSize: 24,
+      marginRight: theme.spacing.md,
+    },
+    modalTitle: {
+      fontSize: theme.fontSize.xl,
+      fontWeight: theme.fontWeight.bold,
+      color: theme.colors.textPrimary,
+    },
+    modalCloseButton: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: theme.colors.surfaceHover,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    modalCloseText: {
+      fontSize: theme.fontSize.lg,
+      color: theme.colors.textSecondary,
+    },
+    modalStats: {
+      padding: theme.spacing.lg,
+      backgroundColor: theme.colors.background,
+    },
+    modalStatsText: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+    },
+    transactionItem: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: theme.spacing.lg,
+    },
+    transactionLeft: {
+      flex: 1,
+    },
+    transactionNote: {
+      fontSize: theme.fontSize.md,
+      fontWeight: theme.fontWeight.medium,
+      color: theme.colors.textPrimary,
+      marginBottom: 4,
+    },
+    transactionDate: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textTertiary,
+    },
+    transactionAmount: {
+      fontSize: theme.fontSize.md,
+      fontWeight: theme.fontWeight.bold,
+    },
+    separator: {
+      height: 1,
+      backgroundColor: theme.colors.surfaceHover,
+      marginHorizontal: theme.spacing.lg,
+    },
+    emptyTransactions: {
+      padding: 40,
+      alignItems: 'center',
+    },
+    emptyTransactionsText: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textTertiary,
+    },
+    highlightCard: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.xl,
+      marginHorizontal: theme.spacing.lg,
+      marginBottom: theme.spacing.xl,
+      ...theme.shadows.md,
+      borderWidth: 2,
+      borderColor: theme.colors.primaryLight,
+    },
+    highlightBadge: {
+      backgroundColor: theme.colors.primary,
+      paddingVertical: 6,
+      paddingHorizontal: theme.spacing.md,
+      borderRadius: theme.borderRadius.md,
+      alignSelf: 'flex-start',
+      marginBottom: theme.spacing.md,
+    },
+    highlightBadgeText: {
+      color: theme.colors.textWhite,
+      fontSize: 11,
+      fontWeight: theme.fontWeight.bold,
+      letterSpacing: 0.5,
+    },
+    chartSubtitle: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textSecondary,
+      marginBottom: theme.spacing.lg,
+      marginTop: 4,
+    },
+    pieChartLegend: {
+      marginTop: theme.spacing.lg,
+      gap: theme.spacing.md,
+    },
+    legendColumn: {
+      backgroundColor: theme.colors.background,
+      padding: theme.spacing.md,
+      borderRadius: theme.borderRadius.md,
+      marginBottom: theme.spacing.sm,
+    },
+    legendHeader: {
+      fontSize: theme.fontSize.sm,
+      fontWeight: theme.fontWeight.bold,
+      color: theme.colors.textPrimary,
+      marginBottom: theme.spacing.sm,
+    },
+    legendRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 6,
+    },
+    legendDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      marginRight: theme.spacing.sm,
+    },
+    legendText: {
+      flex: 1,
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textSecondary,
+    },
+    legendAmount: {
+      fontSize: theme.fontSize.sm,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.textPrimary,
+    },
+  }));
 
   useFocusEffect(
     useCallback(() => {
@@ -526,7 +949,7 @@ const EnhancedAnalysisScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#3B82F6" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
           <Text style={styles.loadingText}>Loading insights...</Text>
         </View>
       </SafeAreaView>
@@ -537,7 +960,7 @@ const EnhancedAnalysisScreen: React.FC = () => {
     <SafeAreaView style={styles.container}>
       {/* Enhanced Header with Gradient */}
       <LinearGradient
-        colors={['#FFFFFF', '#F9FAFB']}
+        colors={[theme.colors.surface, theme.colors.surfaceHover]}
         style={styles.headerGradient}
       >
         <View style={styles.headerContent}>
@@ -617,7 +1040,7 @@ const EnhancedAnalysisScreen: React.FC = () => {
             <Text
               style={[
                 styles.summaryValue,
-                { color: netBalance >= 0 ? '#10B981' : '#EF4444' },
+                { color: netBalance >= 0 ? theme.colors.success : theme.colors.danger },
               ]}
             >
               {formatCurrency(netBalance, currency)}
@@ -656,7 +1079,7 @@ const EnhancedAnalysisScreen: React.FC = () => {
               <Text
                 style={[
                   styles.insightValue,
-                  { color: insights.savingsRate >= 20 ? '#10B981' : '#F59E0B' },
+                  { color: insights.savingsRate >= 20 ? theme.colors.success : theme.colors.warning },
                 ]}
               >
                 {insights.savingsRate.toFixed(1)}%
@@ -691,19 +1114,19 @@ const EnhancedAnalysisScreen: React.FC = () => {
                   name: cat.name,
                   population: cat.amount,
                   color: cat.color,
-                  legendFontColor: '#6B7280',
+                  legendFontColor: theme.colors.textSecondary,
                   legendFontSize: 11,
                 })),
                 ...incomeCategories.slice(0, 3).map((cat) => ({
                   name: cat.name,
                   population: cat.amount,
                   color: cat.color,
-                  legendFontColor: '#6B7280',
+                  legendFontColor: theme.colors.textSecondary,
                   legendFontSize: 11,
                 })),
               ]}
               width={screenWidth - 64}
-              height={220}
+              height={180}
               chartConfig={{
                 color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
               }}
@@ -803,26 +1226,26 @@ const EnhancedAnalysisScreen: React.FC = () => {
                 datasets: [
                   {
                     data: trendData.expense,
-                    color: (opacity = 1) => `rgba(239, 68, 68, ${opacity})`,
+                    color: (opacity = 1) => theme.isDark ? `rgba(248, 113, 113, ${opacity})` : `rgba(239, 68, 68, ${opacity})`,
                     strokeWidth: 3,
                   },
                   {
                     data: trendData.income,
-                    color: (opacity = 1) => `rgba(16, 185, 129, ${opacity})`,
+                    color: (opacity = 1) => theme.isDark ? `rgba(52, 211, 153, ${opacity})` : `rgba(16, 185, 129, ${opacity})`,
                     strokeWidth: 3,
                   },
                 ],
                 legend: ['Expense', 'Income'],
               }}
               width={screenWidth - 48}
-              height={220}
+              height={180}
               chartConfig={{
-                backgroundColor: '#FFFFFF',
-                backgroundGradientFrom: '#FFFFFF',
-                backgroundGradientTo: '#FFFFFF',
+                backgroundColor: theme.colors.surface,
+                backgroundGradientFrom: theme.colors.surface,
+                backgroundGradientTo: theme.colors.surface,
                 decimalPlaces: 0,
-                color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
-                labelColor: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`,
+                color: (opacity = 1) => theme.isDark ? `rgba(96, 165, 250, ${opacity})` : `rgba(59, 130, 246, ${opacity})`,
+                labelColor: (opacity = 1) => theme.isDark ? `rgba(209, 213, 219, ${opacity})` : `rgba(107, 114, 128, ${opacity})`,
                 propsForDots: {
                   r: '4',
                   strokeWidth: '2',
@@ -939,7 +1362,7 @@ const EnhancedAnalysisScreen: React.FC = () => {
                   <Text
                     style={[
                       styles.transactionAmount,
-                      { color: item.type === 'income' ? '#10B981' : '#EF4444' },
+                      { color: item.type === 'income' ? theme.colors.success : theme.colors.danger },
                     ]}
                   >
                     {item.type === 'income' ? '+' : '-'}
@@ -962,451 +1385,5 @@ const EnhancedAnalysisScreen: React.FC = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#6B7280',
-  },
-  headerGradient: {
-    paddingTop: SPACING.md,
-    paddingBottom: SPACING.lg,
-    ...SHADOWS.md,
-  },
-  headerContent: {
-    paddingHorizontal: SPACING.lg,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  iconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: BORDER_RADIUS.xl,
-    backgroundColor: COLORS.successLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: SPACING.md,
-    ...SHADOWS.sm,
-  },
-  headerIcon: {
-    fontSize: 28,
-  },
-  headerTextContainer: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: FONT_SIZE.xxxl,
-    fontWeight: FONT_WEIGHT.extrabold,
-    color: COLORS.textPrimary,
-    marginBottom: SPACING.xs,
-  },
-  headerSubtitle: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
-    fontWeight: FONT_WEIGHT.medium,
-  },
-  filterContainer: {
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    paddingVertical: 8,
-  },
-  filterContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 4,
-    alignItems: 'center',
-  },
-  filterChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    marginHorizontal: 6,
-    borderRadius: 16,
-    backgroundColor: '#F3F4F6',
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    minWidth: 80,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  filterChipActive: {
-    backgroundColor: '#3B82F6',
-    borderColor: '#3B82F6',
-    shadowColor: '#3B82F6',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-    transform: [{ scale: 1.05 }],
-  },
-  filterEmoji: {
-    fontSize: 18,
-    marginRight: 6,
-  },
-  filterLabel: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#6B7280',
-    includeFontPadding: false,
-    textAlignVertical: 'center',
-  },
-  filterLabelActive: {
-    color: '#FFFFFF',
-  },
-  content: {
-    flex: 1,
-  },
-  summaryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    padding: 16,
-    gap: 12,
-  },
-  summaryCard: {
-    flex: 1,
-    minWidth: (screenWidth - 56) / 3,
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  incomeCard: {
-    borderLeftWidth: 4,
-    borderLeftColor: '#10B981',
-  },
-  expenseCard: {
-    borderLeftWidth: 4,
-    borderLeftColor: '#EF4444',
-  },
-  balanceCard: {
-    borderLeftWidth: 4,
-    borderLeftColor: '#3B82F6',
-  },
-  summaryLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginBottom: 8,
-  },
-  summaryValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  insightsCard: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-    padding: 20,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 16,
-  },
-  insightRow: {
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
-  insightItem: {
-    flex: 1,
-  },
-  insightLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginBottom: 4,
-  },
-  insightValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  comparisonBadge: {
-    marginTop: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: '#F3F4F6',
-  },
-  comparisonText: {
-    fontSize: 13,
-    color: '#6B7280',
-    textAlign: 'center',
-  },
-  chartCard: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-    padding: 20,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  categoryItem: {
-    marginBottom: 16,
-  },
-  categoryHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  categoryInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  categoryIcon: {
-    fontSize: 28,
-    marginRight: 12,
-  },
-  categoryName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  categoryCount: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    marginTop: 2,
-  },
-  categoryAmount: {
-    alignItems: 'flex-end',
-  },
-  categoryValue: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  categoryPercentage: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  progressBarContainer: {
-    height: 8,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  chart: {
-    marginVertical: 8,
-    borderRadius: 16,
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  emptyEmoji: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '80%',
-    paddingBottom: 32,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  modalTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  modalIcon: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  modalCloseButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#F3F4F6',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalCloseText: {
-    fontSize: 18,
-    color: '#6B7280',
-  },
-  modalStats: {
-    padding: 16,
-    backgroundColor: '#F9FAFB',
-  },
-  modalStatsText: {
-    fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
-  },
-  transactionItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-  },
-  transactionLeft: {
-    flex: 1,
-  },
-  transactionNote: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  transactionDate: {
-    fontSize: 13,
-    color: '#9CA3AF',
-  },
-  transactionAmount: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  separator: {
-    height: 1,
-    backgroundColor: '#F3F4F6',
-    marginHorizontal: 16,
-  },
-  emptyTransactions: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  emptyTransactionsText: {
-    fontSize: 14,
-    color: '#9CA3AF',
-  },
-  highlightCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    marginHorizontal: 16,
-    marginBottom: 20,
-    elevation: 4,
-    shadowColor: '#3B82F6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    borderWidth: 2,
-    borderColor: '#DBEAFE',
-  },
-  highlightBadge: {
-    backgroundColor: '#3B82F6',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-    marginBottom: 12,
-  },
-  highlightBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  chartSubtitle: {
-    fontSize: 13,
-    color: '#6B7280',
-    marginBottom: 16,
-    marginTop: 4,
-  },
-  pieChartLegend: {
-    marginTop: 16,
-    gap: 12,
-  },
-  legendColumn: {
-    backgroundColor: '#F9FAFB',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  legendHeader: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#1F2937',
-    marginBottom: 8,
-  },
-  legendRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  legendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 8,
-  },
-  legendText: {
-    flex: 1,
-    fontSize: 13,
-    color: '#6B7280',
-  },
-  legendAmount: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1F2937',
-  },
-});
 
 export default EnhancedAnalysisScreen;

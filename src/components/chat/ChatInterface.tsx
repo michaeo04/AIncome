@@ -24,15 +24,20 @@ import {
   getFinancialAdvice,
 } from '../../services/aiService';
 import { refreshMyAnalytics } from '../../services/financialAnalyticsService';
+import { checkSpendingWarning } from '../../services/goalAllocationService';
 import TransactionConfirmationCard from './TransactionConfirmationCard';
+import FormattedText from './FormattedText';
+import SpendingWarningModal from '../goals/SpendingWarningModal';
 import { supabase } from '../../services/supabase';
 import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT, SHADOWS } from '../../theme/modernTheme';
 
 interface ChatInterfaceProps {
   onTransactionSaved: () => void;
+  onEditTransaction?: (transaction: any) => void;
+  onCreateCategory?: (suggestedName: string, type: 'income' | 'expense') => void;
 }
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved, onEditTransaction, onCreateCategory }) => {
   const { user } = useAuthStore();
   const {
     messages,
@@ -49,7 +54,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
   const [userPersonalization, setUserPersonalization] = useState<UserPersonalization | undefined>(undefined);
   const [isSaving, setIsSaving] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(false); // Start hidden, toggle with button
+  const [savedMessageIds, setSavedMessageIds] = useState<Set<string>>(new Set()); // Track saved transaction cards
   const scrollViewRef = useRef<ScrollView>(null);
+
+  // Spending warning modal state
+  const [showSpendingWarning, setShowSpendingWarning] = useState(false);
+  const [spendingWarningData, setSpendingWarningData] = useState({
+    netBalanceAfter: 0,
+    allocatedBalance: 0,
+    deficit: 0,
+  });
+  const [pendingTransaction, setPendingTransaction] = useState<any>(null);
 
   // Fetch categories, currency, and personalization on mount
   useEffect(() => {
@@ -244,7 +259,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
     }
   };
 
-  const handleConfirmTransaction = async (transactionData: any) => {
+  const handleConfirmTransaction = async (transactionData: any, messageId: string) => {
     if (!user) return;
 
     // Validate category_id before saving
@@ -254,6 +269,31 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
       );
       return;
     }
+
+    setIsSaving(true);
+
+    // Check spending warning for expenses
+    if (transactionData.type === 'expense') {
+      const warning = await checkSpendingWarning(user.id, transactionData.amount);
+      if (warning.shouldWarn) {
+        setSpendingWarningData({
+          netBalanceAfter: warning.netBalanceAfter,
+          allocatedBalance: warning.allocatedBalance,
+          deficit: warning.deficit,
+        });
+        setPendingTransaction({ ...transactionData, messageId });
+        setShowSpendingWarning(true);
+        setIsSaving(false);
+        return; // Stop here, let user decide via modal
+      }
+    }
+
+    // Proceed with saving
+    await proceedWithSave(transactionData, messageId);
+  };
+
+  const proceedWithSave = async (transactionData: any, messageId?: string) => {
+    if (!user) return;
 
     setIsSaving(true);
 
@@ -272,6 +312,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
       if (error) {
         console.error('Database error:', error);
         throw error;
+      }
+
+      // Mark transaction card as saved
+      if (messageId) {
+        setSavedMessageIds(prev => new Set(prev).add(messageId));
       }
 
       addAssistantMessage('✅ Đã lưu giao dịch thành công!');
@@ -312,10 +357,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
     }
   };
 
-  const handleEditTransaction = () => {
-    addAssistantMessage(
-      'Để chỉnh sửa, bạn có thể chuyển sang tab "📝 Form" hoặc nói lại thông tin giao dịch với chi tiết rõ ràng hơn nhé!'
-    );
+  const handleEditTransaction = (transaction: any) => {
+    if (onEditTransaction) {
+      // Call parent callback to switch to form tab and pre-fill
+      onEditTransaction(transaction);
+    } else {
+      // Fallback message if callback not provided
+      addAssistantMessage(
+        'Để chỉnh sửa, bạn có thể chuyển sang tab "📝 Form" hoặc nói lại thông tin giao dịch với chi tiết rõ ràng hơn nhé!'
+      );
+    }
   };
 
   const handleCancelTransaction = () => {
@@ -337,6 +388,31 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
 
     setIsSaving(true);
 
+    // Check spending warning for expenses
+    if (transactionData.type === 'expense') {
+      const warning = await checkSpendingWarning(user.id, transactionData.amount);
+      if (warning.shouldWarn) {
+        setSpendingWarningData({
+          netBalanceAfter: warning.netBalanceAfter,
+          allocatedBalance: warning.allocatedBalance,
+          deficit: warning.deficit,
+        });
+        setPendingTransaction({ ...transactionData, messageId, index });
+        setShowSpendingWarning(true);
+        setIsSaving(false);
+        return; // Stop here, let user decide via modal
+      }
+    }
+
+    // Proceed with saving
+    await proceedWithSaveSingle(transactionData, messageId, index);
+  };
+
+  const proceedWithSaveSingle = async (transactionData: any, messageId: string, index: number) => {
+    if (!user) return;
+
+    setIsSaving(true);
+
     try {
       const { error } = await supabase
         .from('transactions')
@@ -353,6 +429,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
         console.error('Database error:', error);
         throw error;
       }
+
+      // Mark transaction card as saved (composite key for multiple transactions)
+      setSavedMessageIds(prev => new Set(prev).add(`${messageId}-${index}`));
 
       addAssistantMessage(`✅ Đã lưu giao dịch #${index + 1} thành công!`);
       setIsSaving(false);
@@ -373,6 +452,35 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
     addAssistantMessage(
       `Đã hủy giao dịch #${index + 1}. Các giao dịch khác vẫn có thể được lưu! 😊`
     );
+  };
+
+  // Spending Warning Modal Handlers
+  const handleGoToGoals = () => {
+    setShowSpendingWarning(false);
+    setPendingTransaction(null);
+    addAssistantMessage(
+      '💡 Hãy vào tab Savings để quản lý tiền đã phân bổ cho các mục tiêu nhé! Sau đó bạn có thể quay lại để lưu giao dịch.'
+    );
+  };
+
+  const handleContinueAnyway = async () => {
+    setShowSpendingWarning(false);
+    if (pendingTransaction) {
+      if (pendingTransaction.index !== undefined) {
+        // Single transaction from bulk
+        await proceedWithSaveSingle(pendingTransaction, pendingTransaction.messageId, pendingTransaction.index);
+      } else {
+        // Regular transaction
+        await proceedWithSave(pendingTransaction, pendingTransaction.messageId);
+      }
+    }
+    setPendingTransaction(null);
+  };
+
+  const handleCancelWarning = () => {
+    setShowSpendingWarning(false);
+    setPendingTransaction(null);
+    addAssistantMessage('Đã hủy giao dịch này. Bạn có thể nói về giao dịch khác! 😊');
   };
 
   const handleQuickAction = async (displayMessage: string, actualPrompt?: string) => {
@@ -471,17 +579,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
       return (
         <View key={message.id} style={styles.messageWrapper}>
           <View style={[styles.messageBubble, styles.assistantBubble]}>
-            <Text style={styles.assistantText}>{message.content}</Text>
+            <FormattedText text={message.content} style={styles.assistantText} />
           </View>
           {message.parsedTransactions.map((transaction: any, index: number) => (
             <TransactionConfirmationCard
               key={`${message.id}-transaction-${index}`}
               transaction={transaction}
               currency={currency}
-              onEdit={handleEditTransaction}
+              onEdit={() => handleEditTransaction(transaction)}
               onCancel={() => handleCancelSingleTransaction(message.id, index)}
               onConfirm={() => handleConfirmSingleTransaction(transaction, message.id, index)}
               isLoading={isSaving}
+              isSaved={savedMessageIds.has(`${message.id}-${index}`)}
+              onCreateCategory={onCreateCategory}
             />
           ))}
           {/* Bulk save button for multiple transactions */}
@@ -503,15 +613,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
       return (
         <View key={message.id} style={styles.messageWrapper}>
           <View style={[styles.messageBubble, styles.assistantBubble]}>
-            <Text style={styles.assistantText}>{message.content}</Text>
+            <FormattedText text={message.content} style={styles.assistantText} />
           </View>
           <TransactionConfirmationCard
             transaction={message.parsedTransaction}
             currency={currency}
-            onEdit={handleEditTransaction}
+            onEdit={() => handleEditTransaction(message.parsedTransaction)}
             onCancel={handleCancelTransaction}
-            onConfirm={() => handleConfirmTransaction(message.parsedTransaction)}
+            onConfirm={() => handleConfirmTransaction(message.parsedTransaction, message.id)}
             isLoading={isSaving}
+            isSaved={savedMessageIds.has(message.id)}
+            onCreateCategory={onCreateCategory}
           />
         </View>
       );
@@ -531,9 +643,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
             isUser ? styles.userBubble : styles.assistantBubble,
           ]}
         >
-          <Text style={isUser ? styles.userText : styles.assistantText}>
-            {message.content}
-          </Text>
+          {isUser ? (
+            <Text style={styles.userText}>
+              {message.content}
+            </Text>
+          ) : (
+            <FormattedText
+              text={message.content}
+              style={styles.assistantText}
+            />
+          )}
           <Text style={styles.timestamp}>
             {new Date(message.timestamp).toLocaleTimeString('vi-VN', {
               hour: '2-digit',
@@ -549,7 +668,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
     >
       {/* Messages */}
       <ScrollView
@@ -583,56 +702,56 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
             <TouchableOpacity
               style={styles.quickActionButton}
               onPress={() => handleQuickAction(
-                '📊 Tình hình tài chính của tôi thế nào?',
-                'Phân tích tổng quan sức khỏe tài chính của tôi hiện tại. Đánh giá số dư, thu chi, tỷ lệ tiết kiệm và điểm sức khỏe tài chính. Cho tôi biết tôi đang làm tốt ở đâu và cần cải thiện gì.'
+                '📊 Sức khỏe tài chính của tôi',
+                'Phân tích **sức khỏe tài chính tổng quan** từ dữ liệu AIncome của tôi. Đánh giá **điểm sức khỏe tài chính**, số dư hiện tại, tỷ lệ tiết kiệm so với chuẩn mực 15-20%. Cho tôi biết tôi đang làm tốt ở đâu và **hành động cụ thể** nào cần làm trong app (tạo ngân sách, đặt mục tiêu tiết kiệm). Dựa trên mục tiêu và mối quan tâm tài chính mà tôi đã đặt ra.'
               )}
             >
               <Text style={styles.quickActionIcon}>📊</Text>
-              <Text style={styles.quickActionText}>Tình hình tài chính</Text>
+              <Text style={styles.quickActionText}>Sức khỏe tài chính</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.quickActionButton}
               onPress={() => handleQuickAction(
-                '💰 Tiền của tôi đang đi đâu?',
-                'Phân tích chi tiết tiền của tôi đang được chi tiêu vào đâu. Tập trung vào top 5 danh mục chi tiêu lớn nhất, tỷ lệ phần trăm từng danh mục, và so sánh với mức trung bình. Chỉ ra những khoản chi tiêu nào cần kiểm soát.'
+                '💸 Tiền tôi đang tiêu vào đâu?',
+                'Phân tích **top 5 danh mục chi tiêu** từ giao dịch trong AIncome. Cho tôi biết từng danh mục chiếm bao nhiêu % tổng chi tiêu, so sánh với tháng trước. Chỉ ra danh mục nào đang **vượt ngân sách** hoặc cần kiểm soát. Gợi ý tôi **tạo/điều chỉnh ngân sách** trong app cho những danh mục này. Phù hợp với mối quan tâm tài chính của tôi.'
               )}
             >
-              <Text style={styles.quickActionIcon}>💰</Text>
-              <Text style={styles.quickActionText}>Chi tiêu ở đâu?</Text>
+              <Text style={styles.quickActionIcon}>💸</Text>
+              <Text style={styles.quickActionText}>Phân tích chi tiêu</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.quickActionButton}
               onPress={() => handleQuickAction(
-                '🎯 Tôi nên tiết kiệm bao nhiêu?',
-                'Đưa ra lời khuyên cụ thể về tiết kiệm. Dựa trên tỷ lệ tiết kiệm hiện tại của tôi, cho tôi biết tôi nên tiết kiệm bao nhiêu mỗi tháng, những danh mục chi tiêu nào có thể cắt giảm, và chiến lược tiết kiệm phù hợp với tình hình của tôi.'
+                '🎯 Cần tiết kiệm bao nhiêu?',
+                'Dựa vào **tỷ lệ tiết kiệm hiện tại** và **mục tiêu tài chính** tôi đã chọn, tư vấn tôi nên tiết kiệm bao nhiêu/tháng. Phân tích danh mục chi tiêu nào có thể cắt giảm từ dữ liệu app. Gợi ý tôi **tạo mục tiêu tiết kiệm** trong AIncome với số tiền cụ thể. Tính toán xem bao lâu đạt được mục tiêu. Phù hợp với thu nhập và tình trạng gia đình của tôi.'
               )}
             >
               <Text style={styles.quickActionIcon}>🎯</Text>
-              <Text style={styles.quickActionText}>Lời khuyên tiết kiệm</Text>
+              <Text style={styles.quickActionText}>Kế hoạch tiết kiệm</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.quickActionButton}
               onPress={() => handleQuickAction(
-                '📈 Báo cáo tài chính tháng này',
-                'Báo cáo chi tiết tài chính tháng này. Bao gồm tổng thu nhập, tổng chi tiêu, tiền tiết kiệm được, so sánh với tháng trước và trung bình 3 tháng. Đánh giá hiệu suất và đưa ra nhận xét.'
+                '📈 Báo cáo tháng này',
+                'Tóm tắt **tài chính tháng này** từ AIncome: tổng thu, tổng chi, tiết kiệm được bao nhiêu. So sánh với **trung bình 3 tháng** và tháng trước - tăng/giảm bao nhiêu %. Đánh giá **tình trạng ngân sách** (bao nhiêu vượt mức, cảnh báo). Phân tích **quỹ dự phòng** hiện tại đủ mấy tháng. Đưa ra **3 hành động** cụ thể cần làm trong app tuần tới.'
               )}
             >
               <Text style={styles.quickActionIcon}>📈</Text>
-              <Text style={styles.quickActionText}>Báo cáo tháng này</Text>
+              <Text style={styles.quickActionText}>Tóm tắt tháng này</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.quickActionButton}
               onPress={() => handleQuickAction(
-                '📉 Xu hướng chi tiêu của tôi',
-                'Phân tích xu hướng chi tiêu của tôi. Chi tiêu tháng này có tăng hay giảm so với tháng trước? Xu hướng 3 tháng gần đây thế nào? Danh mục nào tăng nhiều nhất? Cảnh báo nếu có dấu hiệu chi tiêu quá mức.'
+                '📉 Xu hướng 3 tháng',
+                'Phân tích **xu hướng thu chi 3 tháng** gần đây từ lịch sử AIncome. Thu nhập và chi tiêu đang tăng/giảm/ổn định? Danh mục nào tăng mạnh nhất? **Tỷ lệ tiết kiệm** có cải thiện không? Cảnh báo nếu có dấu hiệu chi tiêu vượt kiểm soát hoặc thu nhập giảm. Gợi ý **điều chỉnh ngân sách** dựa trên xu hướng này.'
               )}
             >
               <Text style={styles.quickActionIcon}>📉</Text>
-              <Text style={styles.quickActionText}>Xu hướng chi tiêu</Text>
+              <Text style={styles.quickActionText}>Xu hướng 3 tháng</Text>
             </TouchableOpacity>
           </ScrollView>
         </View>
@@ -683,6 +802,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved }) => 
           <Text style={styles.sendButtonText}>📤</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Spending Warning Modal */}
+      <SpendingWarningModal
+        visible={showSpendingWarning}
+        netBalanceAfter={spendingWarningData.netBalanceAfter}
+        allocatedBalance={spendingWarningData.allocatedBalance}
+        deficit={spendingWarningData.deficit}
+        currency={currency}
+        onClose={handleCancelWarning}
+        onGoToGoals={handleGoToGoals}
+        onContinueAnyway={handleContinueAnyway}
+      />
     </KeyboardAvoidingView>
   );
 };
@@ -697,7 +828,7 @@ const styles = StyleSheet.create({
   },
   messagesContent: {
     padding: SPACING.md,
-    paddingBottom: SPACING.lg,
+    paddingBottom: SPACING.md,
   },
   messageWrapper: {
     marginBottom: SPACING.md,

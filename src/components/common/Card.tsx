@@ -9,6 +9,7 @@ import {
   ViewStyle,
   TextStyle,
 } from 'react-native';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 
 interface CardProps {
   children: ReactNode;
@@ -23,6 +24,17 @@ export const Card: React.FC<CardProps> = ({
   onPress,
   noPadding = false,
 }) => {
+  const styles = useThemedStyles((theme) => StyleSheet.create({
+    card: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      ...theme.shadows.md,
+    },
+    cardPadding: {
+      padding: theme.spacing.lg,
+    },
+  }));
+
   const CardComponent = onPress ? TouchableOpacity : View;
 
   return (
@@ -51,6 +63,40 @@ export const CardHeader: React.FC<CardHeaderProps> = ({
   action,
   style,
 }) => {
+  const styles = useThemedStyles((theme) => StyleSheet.create({
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: theme.spacing.lg,
+    },
+    headerLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    headerIcon: {
+      fontSize: theme.fontSize.xxl,
+      marginRight: theme.spacing.md,
+    },
+    headerText: {
+      flex: 1,
+    },
+    title: {
+      fontSize: theme.fontSize.lg,
+      fontWeight: theme.fontWeight.bold,
+      color: theme.colors.textPrimary,
+    },
+    subtitle: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textSecondary,
+      marginTop: 2,
+    },
+    headerAction: {
+      marginLeft: theme.spacing.md,
+    },
+  }));
+
   return (
     <View style={[styles.header, style]}>
       <View style={styles.headerLeft}>
@@ -80,6 +126,33 @@ export const InfoRow: React.FC<InfoRowProps> = ({
   valueStyle,
   style,
 }) => {
+  const styles = useThemedStyles((theme) => StyleSheet.create({
+    infoRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: theme.spacing.md,
+    },
+    infoLabel: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    infoIcon: {
+      fontSize: theme.fontSize.lg,
+      marginRight: theme.spacing.sm,
+    },
+    labelText: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textSecondary,
+    },
+    valueText: {
+      fontSize: theme.fontSize.sm,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.textPrimary,
+    },
+  }));
+
   return (
     <View style={[styles.infoRow, style]}>
       <View style={styles.infoLabel}>
@@ -100,6 +173,14 @@ interface DividerProps {
 }
 
 export const Divider: React.FC<DividerProps> = ({ style }) => {
+  const styles = useThemedStyles((theme) => StyleSheet.create({
+    divider: {
+      height: 1,
+      backgroundColor: theme.colors.border,
+      marginVertical: theme.spacing.sm,
+    },
+  }));
+
   return <View style={[styles.divider, style]} />;
 };
 
@@ -111,6 +192,18 @@ interface BadgeProps {
 }
 
 export const Badge: React.FC<BadgeProps> = ({ text, color, style, textStyle }) => {
+  const styles = useThemedStyles((theme) => StyleSheet.create({
+    badge: {
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.xs,
+      borderRadius: theme.borderRadius.md,
+    },
+    badgeText: {
+      fontSize: theme.fontSize.xs,
+      fontWeight: theme.fontWeight.semibold,
+    },
+  }));
+
   return (
     <View style={[styles.badge, { backgroundColor: color + '20' }, style]}>
       <Text style={[styles.badgeText, { color }, textStyle]}>{text}</Text>
@@ -135,6 +228,29 @@ export const StatCard: React.FC<StatCardProps> = ({
   onPress,
   style,
 }) => {
+  const styles = useThemedStyles((theme) => StyleSheet.create({
+    statCard: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.md,
+      padding: theme.spacing.lg,
+      borderLeftWidth: 4,
+      ...theme.shadows.md,
+    },
+    statIcon: {
+      fontSize: theme.fontSize.xxxl,
+      marginBottom: theme.spacing.sm,
+    },
+    statLabel: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textSecondary,
+      marginBottom: theme.spacing.xs,
+    },
+    statValue: {
+      fontSize: theme.fontSize.xxl,
+      fontWeight: theme.fontWeight.bold,
+    },
+  }));
+
   const CardComponent = onPress ? TouchableOpacity : View;
 
   return (
@@ -149,111 +265,3 @@ export const StatCard: React.FC<StatCardProps> = ({
     </CardComponent>
   );
 };
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-  },
-  cardPadding: {
-    padding: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  headerIcon: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  headerText: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1F2937',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  headerAction: {
-    marginLeft: 12,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  infoLabel: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  infoIcon: {
-    fontSize: 18,
-    marginRight: 8,
-  },
-  labelText: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  valueText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1F2937',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#E5E7EB',
-    marginVertical: 8,
-  },
-  badge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  statCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    borderLeftWidth: 4,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-  },
-  statIcon: {
-    fontSize: 28,
-    marginBottom: 8,
-  },
-  statLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginBottom: 4,
-  },
-  statValue: {
-    fontSize: 22,
-    fontWeight: '700',
-  },
-});

@@ -20,6 +20,7 @@ import { supabase } from '../../services/supabase';
 import { useAuthStore } from '../../stores/authStore';
 import { CATEGORY_COLORS, DEFAULT_ICONS } from '../../constants';
 import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT, SHADOWS } from '../../theme/modernTheme';
+import CustomIconPicker from '../../components/common/CustomIconPicker';
 
 type CategoryFormScreenNavigationProp = StackNavigationProp<
   ProfileStackParamList,
@@ -34,11 +35,13 @@ const CategoryFormScreen: React.FC = () => {
 
   const categoryId = route.params?.categoryId;
   const initialType = route.params?.type || 'expense';
+  const suggestedName = route.params?.suggestedName;
   const isEditMode = !!categoryId;
 
   const [type, setType] = useState<'income' | 'expense'>(initialType);
-  const [name, setName] = useState('');
+  const [name, setName] = useState(suggestedName || '');
   const [selectedIcon, setSelectedIcon] = useState('💰');
+  const [selectedIconUrl, setSelectedIconUrl] = useState<string | undefined>(undefined);
   const [selectedColor, setSelectedColor] = useState('#3B82F6');
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
@@ -72,6 +75,7 @@ const CategoryFormScreen: React.FC = () => {
         setType(data.type);
         setName(data.name);
         setSelectedIcon(data.icon);
+        setSelectedIconUrl(data.icon_url);
         setSelectedColor(data.color);
       }
     } catch (error: any) {
@@ -107,6 +111,7 @@ const CategoryFormScreen: React.FC = () => {
         name: name.trim(),
         type,
         icon: selectedIcon,
+        icon_url: selectedIconUrl || null,
         color: selectedColor,
         is_default: false,
       };
@@ -242,9 +247,20 @@ const CategoryFormScreen: React.FC = () => {
           />
         </View>
 
-        {/* Icon Picker */}
+        {/* Icon Picker - Custom Upload or Emoji */}
+        <CustomIconPicker
+          currentIcon={selectedIcon}
+          currentIconUrl={selectedIconUrl}
+          onIconSelected={(emoji, iconUrl) => {
+            setSelectedIcon(emoji);
+            setSelectedIconUrl(iconUrl);
+          }}
+          type="category"
+        />
+
+        {/* Emoji Icon Picker (fallback/alternative) */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Icon</Text>
+          <Text style={styles.sectionLabel}>Or Choose Emoji Icon</Text>
           <View style={styles.iconGrid}>
             {availableIcons.map((icon, index) => (
               <TouchableOpacity
@@ -253,7 +269,10 @@ const CategoryFormScreen: React.FC = () => {
                   styles.iconButton,
                   selectedIcon === icon && styles.iconButtonSelected,
                 ]}
-                onPress={() => setSelectedIcon(icon)}
+                onPress={() => {
+                  setSelectedIcon(icon);
+                  setSelectedIconUrl(undefined); // Clear custom image when emoji is selected
+                }}
               >
                 <Text style={styles.iconText}>{icon}</Text>
               </TouchableOpacity>

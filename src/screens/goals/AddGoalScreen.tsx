@@ -17,6 +17,8 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { GoalsStackParamList } from '../../navigation/types';
 import { supabase } from '../../services/supabase';
 import { useAuthStore } from '../../stores/authStore';
+import { useThemeStore } from '../../stores/themeStore';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { formatCurrency } from '../../utils/helpers';
 import { validateGoalAgainstBalance, showValidationAlert } from '../../utils/validation';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -39,6 +41,7 @@ const AddGoalScreen: React.FC = () => {
   const navigation = useNavigation<AddGoalScreenNavigationProp>();
   const route = useRoute<AddGoalScreenRouteProp>();
   const { user } = useAuthStore();
+  const { theme } = useThemeStore();
 
   const goalId = route.params?.goalId;
   const isEditMode = !!goalId;
@@ -52,6 +55,241 @@ const AddGoalScreen: React.FC = () => {
   const [currency, setCurrency] = useState('VND');
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
+
+  const styles = useThemedStyles((theme) => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: theme.colors.background,
+    },
+    loadingText: {
+      marginTop: theme.spacing.md,
+      fontSize: theme.fontSize.md,
+      color: theme.colors.textSecondary,
+    },
+    scrollContent: {
+      padding: theme.spacing.lg,
+      paddingBottom: 40,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: theme.spacing.xxl,
+      paddingTop: theme.spacing.sm,
+    },
+    cancelButton: {
+      fontSize: theme.fontSize.md,
+      color: theme.colors.textSecondary,
+    },
+    headerTitle: {
+      fontSize: theme.fontSize.lg,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.textPrimary,
+    },
+    saveButton: {
+      fontSize: theme.fontSize.md,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.primary,
+    },
+    saveButtonDisabled: {
+      color: theme.colors.textTertiary,
+    },
+    previewSection: {
+      alignItems: 'center',
+      paddingVertical: theme.spacing.xxl,
+      backgroundColor: theme.colors.surfaceHover,
+      borderRadius: theme.borderRadius.lg,
+      marginBottom: theme.spacing.xxl,
+    },
+    previewIcon: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: theme.spacing.md,
+    },
+    previewIconText: {
+      fontSize: 40,
+    },
+    previewName: {
+      fontSize: theme.fontSize.xl,
+      fontWeight: theme.fontWeight.bold,
+      color: theme.colors.textPrimary,
+      marginBottom: theme.spacing.sm,
+    },
+    previewAmount: {
+      fontSize: 24,
+      fontWeight: theme.fontWeight.bold,
+      color: theme.colors.primary,
+    },
+    section: {
+      marginBottom: theme.spacing.xxl,
+    },
+    sectionLabel: {
+      fontSize: theme.fontSize.sm,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.textPrimary,
+      marginBottom: theme.spacing.md,
+    },
+    textInput: {
+      backgroundColor: theme.colors.surfaceHover,
+      borderWidth: 2,
+      borderColor: theme.colors.border,
+      borderRadius: theme.borderRadius.md,
+      paddingHorizontal: theme.spacing.lg,
+      paddingVertical: 14,
+      fontSize: theme.fontSize.md,
+      color: theme.colors.textPrimary,
+    },
+    iconGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: theme.spacing.md,
+    },
+    iconButton: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: theme.colors.surfaceHover,
+      borderWidth: 2,
+      borderColor: theme.colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    iconButtonSelected: {
+      borderColor: theme.colors.primary,
+      backgroundColor: theme.colors.primaryLight,
+    },
+    iconText: {
+      fontSize: 28,
+    },
+    colorGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: theme.spacing.md,
+    },
+    colorButton: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      justifyContent: 'center',
+      alignItems: 'center',
+      ...theme.shadows.sm,
+    },
+    colorButtonSelected: {
+      borderWidth: 3,
+      borderColor: theme.colors.textPrimary,
+    },
+    colorCheckmark: {
+      color: theme.colors.textWhite,
+      fontSize: 24,
+      fontWeight: theme.fontWeight.bold,
+    },
+    amountContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.colors.surfaceHover,
+      borderWidth: 2,
+      borderColor: theme.colors.border,
+      borderRadius: theme.borderRadius.md,
+      paddingHorizontal: theme.spacing.lg,
+      paddingVertical: theme.spacing.md,
+    },
+    currencySymbol: {
+      fontSize: theme.fontSize.xl,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.textSecondary,
+      marginRight: theme.spacing.sm,
+    },
+    amountInput: {
+      flex: 1,
+      fontSize: 24,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.textPrimary,
+    },
+    amountPreview: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textSecondary,
+      marginTop: theme.spacing.sm,
+      marginLeft: 4,
+    },
+    dateButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.colors.surfaceHover,
+      borderWidth: 2,
+      borderColor: theme.colors.border,
+      borderRadius: theme.borderRadius.md,
+      paddingHorizontal: theme.spacing.lg,
+      paddingVertical: 14,
+    },
+    dateButtonText: {
+      fontSize: 24,
+      marginRight: theme.spacing.md,
+    },
+    dateButtonLabel: {
+      fontSize: theme.fontSize.md,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.textPrimary,
+    },
+    calculationCard: {
+      backgroundColor: theme.colors.primaryLight,
+      borderRadius: theme.borderRadius.md,
+      padding: theme.spacing.lg,
+      marginTop: theme.spacing.sm,
+    },
+    calculationTitle: {
+      fontSize: theme.fontSize.md,
+      fontWeight: theme.fontWeight.bold,
+      color: theme.colors.textPrimary,
+      marginBottom: theme.spacing.md,
+    },
+    calculationRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: theme.spacing.sm,
+    },
+    calculationLabel: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textSecondary,
+    },
+    calculationValue: {
+      fontSize: theme.fontSize.md,
+      fontWeight: theme.fontWeight.bold,
+      color: theme.colors.primary,
+    },
+    calculationDivider: {
+      height: 1,
+      backgroundColor: theme.colors.border,
+      marginVertical: 4,
+    },
+    calculationHint: {
+      fontSize: theme.fontSize.xs,
+      color: theme.colors.textSecondary,
+      marginTop: theme.spacing.sm,
+      fontStyle: 'italic',
+    },
+    infoCard: {
+      backgroundColor: theme.colors.primaryLight,
+      borderRadius: theme.borderRadius.md,
+      padding: theme.spacing.lg,
+      borderWidth: 1,
+      borderColor: theme.colors.primary,
+    },
+    infoHint: {
+      fontSize: theme.fontSize.xs,
+      color: theme.colors.textSecondary,
+      marginBottom: 0,
+    },
+  }));
 
   useEffect(() => {
     loadData();
@@ -140,23 +378,8 @@ const AddGoalScreen: React.FC = () => {
   const handleSave = async () => {
     if (!validateForm() || !user) return;
 
-    // Validate goal against balance
-    const balanceValidation = await validateGoalAgainstBalance(
-      user.id,
-      Number(targetAmount),
-      isEditMode ? goalId : undefined
-    );
-
-    if (!balanceValidation.isValid) {
-      showValidationAlert(
-        balanceValidation,
-        () => proceedWithSave(), // Continue anyway
-        undefined // Cancel
-      );
-      return;
-    }
-
-    // If validation passes, proceed with save
+    // In the new allocation system, goals start with 0 allocated
+    // Users will allocate money after creating the goal
     await proceedWithSave();
   };
 
@@ -211,7 +434,7 @@ const AddGoalScreen: React.FC = () => {
   if (isFetching) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3B82F6" />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
         <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
@@ -265,7 +488,7 @@ const AddGoalScreen: React.FC = () => {
           <TextInput
             style={styles.textInput}
             placeholder="e.g., Save for vacation"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={theme.colors.textTertiary}
             value={name}
             onChangeText={setName}
             editable={!isLoading}
@@ -321,7 +544,7 @@ const AddGoalScreen: React.FC = () => {
             <TextInput
               style={styles.amountInput}
               placeholder="0"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={theme.colors.textTertiary}
               keyboardType="numeric"
               value={targetAmount}
               onChangeText={setTargetAmount}
@@ -380,240 +603,21 @@ const AddGoalScreen: React.FC = () => {
               </Text>
             </View>
             <Text style={styles.calculationHint}>
-              Save {formatCurrency(monthlyRate, currency)} per month to reach your goal
+              After creating this goal, you'll allocate money from your available balance to track progress.
             </Text>
           </View>
         )}
+
+        {/* Info about allocation system */}
+        <View style={styles.infoCard}>
+          <Text style={styles.calculationTitle}>ℹ️ How It Works</Text>
+          <Text style={styles.infoHint}>
+            After creating this goal, go to Budget → Savings tab to allocate money. You can transfer money from your available balance to this goal anytime!
+          </Text>
+        </View>
       </ScrollView>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#6B7280',
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-    paddingTop: 8,
-  },
-  cancelButton: {
-    fontSize: 16,
-    color: '#6B7280',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
-  },
-  saveButton: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#3B82F6',
-  },
-  saveButtonDisabled: {
-    color: '#9CA3AF',
-  },
-  previewSection: {
-    alignItems: 'center',
-    paddingVertical: 24,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 16,
-    marginBottom: 24,
-  },
-  previewIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  previewIconText: {
-    fontSize: 40,
-  },
-  previewName: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1F2937',
-    marginBottom: 8,
-  },
-  previewAmount: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#3B82F6',
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 12,
-  },
-  textInput: {
-    backgroundColor: '#F9FAFB',
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: '#1F2937',
-  },
-  iconGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  iconButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  iconButtonSelected: {
-    borderColor: '#3B82F6',
-    backgroundColor: '#EFF6FF',
-  },
-  iconText: {
-    fontSize: 28,
-  },
-  colorGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  colorButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  colorButtonSelected: {
-    borderWidth: 3,
-    borderColor: '#1F2937',
-  },
-  colorCheckmark: {
-    color: '#FFFFFF',
-    fontSize: 24,
-    fontWeight: '700',
-  },
-  amountContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  currencySymbol: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#6B7280',
-    marginRight: 8,
-  },
-  amountInput: {
-    flex: 1,
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#1F2937',
-  },
-  amountPreview: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 8,
-    marginLeft: 4,
-  },
-  dateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    borderWidth: 2,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  dateButtonText: {
-    fontSize: 24,
-    marginRight: 12,
-  },
-  dateButtonLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
-  },
-  calculationCard: {
-    backgroundColor: '#EFF6FF',
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 8,
-  },
-  calculationTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1F2937',
-    marginBottom: 12,
-  },
-  calculationRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  calculationLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  calculationValue: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#3B82F6',
-  },
-  calculationDivider: {
-    height: 1,
-    backgroundColor: '#DBEAFE',
-    marginVertical: 4,
-  },
-  calculationHint: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 8,
-    fontStyle: 'italic',
-  },
-});
 
 export default AddGoalScreen;

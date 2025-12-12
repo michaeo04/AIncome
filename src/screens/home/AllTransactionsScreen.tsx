@@ -21,9 +21,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { HomeStackParamList } from '../../navigation/types';
 import { supabase } from '../../services/supabase';
 import { useAuthStore } from '../../stores/authStore';
+import { useThemeStore } from '../../stores/themeStore';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { Transaction } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/helpers';
-import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT, SHADOWS } from '../../theme/modernTheme';
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, subMonths } from 'date-fns';
 
 type AllTransactionsScreenNavigationProp = StackNavigationProp<HomeStackParamList>;
@@ -59,6 +60,7 @@ const TIME_FILTERS: TimeFilterOption[] = [
 const AllTransactionsScreen: React.FC = () => {
   const navigation = useNavigation<AllTransactionsScreenNavigationProp>();
   const { user } = useAuthStore();
+  const { theme } = useThemeStore();
 
   // State
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -78,6 +80,270 @@ const AllTransactionsScreen: React.FC = () => {
     totalExpense: 0,
     count: 0,
   });
+
+  const styles = useThemedStyles((theme) => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: theme.colors.background,
+    },
+    loadingText: {
+      marginTop: theme.spacing.md,
+      fontSize: theme.fontSize.md,
+      color: theme.colors.textSecondary,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: theme.spacing.lg,
+      paddingVertical: theme.spacing.md,
+      backgroundColor: theme.colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      borderRadius: theme.borderRadius.full,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    headerTitle: {
+      fontSize: theme.fontSize.xl,
+      fontWeight: theme.fontWeight.bold,
+      color: theme.colors.textPrimary,
+    },
+    statsCard: {
+      flexDirection: 'row',
+      backgroundColor: theme.colors.surface,
+      marginHorizontal: theme.spacing.lg,
+      marginTop: theme.spacing.md,
+      marginBottom: theme.spacing.md,
+      paddingVertical: theme.spacing.lg,
+      borderRadius: theme.borderRadius.lg,
+      ...theme.shadows.sm,
+    },
+    statItem: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    statDivider: {
+      width: 1,
+      backgroundColor: theme.colors.border,
+    },
+    statLabel: {
+      fontSize: theme.fontSize.xs,
+      color: theme.colors.textSecondary,
+      marginBottom: theme.spacing.xs,
+    },
+    statValue: {
+      fontSize: theme.fontSize.lg,
+      fontWeight: theme.fontWeight.bold,
+      color: theme.colors.textPrimary,
+    },
+    searchContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.colors.surface,
+      marginHorizontal: theme.spacing.lg,
+      marginBottom: theme.spacing.md,
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      borderRadius: theme.borderRadius.lg,
+      ...theme.shadows.sm,
+    },
+    searchIcon: {
+      marginRight: theme.spacing.sm,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: theme.fontSize.md,
+      color: theme.colors.textPrimary,
+      paddingVertical: theme.spacing.xs,
+    },
+    filtersWrapper: {
+      height: 116,
+      flexShrink: 0,
+      backgroundColor: theme.colors.background,
+    },
+    filterScrollContainer: {
+      marginBottom: 10,
+      marginTop: 4,
+      height: 50,
+      maxHeight: 50,
+    },
+    filterContainer: {
+      paddingHorizontal: theme.spacing.lg,
+      paddingVertical: 4,
+      gap: theme.spacing.sm,
+    },
+    filterChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: 10,
+      marginRight: 0,
+      borderRadius: 20,
+      backgroundColor: theme.colors.surface,
+      borderWidth: 2,
+      borderColor: theme.colors.border,
+      width: 115,
+      height: 42,
+      flexShrink: 0,
+      flexGrow: 0,
+    },
+    filterChipActive: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+    },
+    filterIcon: {
+      fontSize: 16,
+      marginRight: 5,
+    },
+    filterLabel: {
+      fontSize: 14,
+      fontWeight: theme.fontWeight.bold,
+      color: theme.colors.textSecondary,
+      includeFontPadding: false,
+      textAlignVertical: 'center',
+      flexShrink: 0,
+    },
+    filterLabelActive: {
+      color: theme.colors.textWhite,
+    },
+    timeFilterScrollContainer: {
+      marginBottom: 12,
+      marginTop: 2,
+      height: 42,
+      maxHeight: 42,
+    },
+    timeFilterContainer: {
+      paddingHorizontal: theme.spacing.lg,
+      paddingVertical: 4,
+      gap: theme.spacing.sm,
+    },
+    timeFilterChip: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      marginRight: 0,
+      borderRadius: theme.borderRadius.md,
+      backgroundColor: theme.colors.surfaceHover,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      height: 34,
+      justifyContent: 'center',
+      alignItems: 'center',
+      flexShrink: 0,
+      flexGrow: 0,
+    },
+    timeFilterChipActive: {
+      backgroundColor: theme.colors.primaryLight,
+      borderColor: theme.colors.primary,
+    },
+    timeFilterLabel: {
+      fontSize: 13,
+      fontWeight: theme.fontWeight.medium,
+      color: theme.colors.textSecondary,
+      includeFontPadding: false,
+      textAlignVertical: 'center',
+    },
+    timeFilterLabelActive: {
+      color: theme.colors.primary,
+      fontWeight: theme.fontWeight.bold,
+    },
+    listContent: {
+      paddingHorizontal: theme.spacing.lg,
+      paddingBottom: theme.spacing.xxl,
+    },
+    transactionCard: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      backgroundColor: theme.colors.surface,
+      paddingVertical: theme.spacing.md,
+      paddingHorizontal: theme.spacing.lg,
+      borderRadius: theme.borderRadius.lg,
+      ...theme.shadows.sm,
+    },
+    transactionLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    transactionIcon: {
+      width: 52,
+      height: 52,
+      borderRadius: theme.borderRadius.full,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: theme.spacing.md,
+    },
+    transactionIconText: {
+      fontSize: theme.fontSize.xxl,
+    },
+    transactionInfo: {
+      flex: 1,
+    },
+    transactionCategory: {
+      fontSize: theme.fontSize.md,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.textPrimary,
+      marginBottom: 2,
+    },
+    transactionNote: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textSecondary,
+      marginBottom: 2,
+    },
+    transactionDate: {
+      fontSize: theme.fontSize.xs,
+      color: theme.colors.textTertiary,
+    },
+    transactionRight: {
+      alignItems: 'flex-end',
+    },
+    transactionAmount: {
+      fontSize: theme.fontSize.lg,
+      fontWeight: theme.fontWeight.bold,
+    },
+    incomeAmount: {
+      color: theme.colors.success,
+    },
+    expenseAmount: {
+      color: theme.colors.danger,
+    },
+    separator: {
+      height: theme.spacing.sm,
+    },
+    emptyState: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 60,
+    },
+    emptyStateIcon: {
+      fontSize: 64,
+      marginBottom: theme.spacing.lg,
+    },
+    emptyStateText: {
+      fontSize: theme.fontSize.lg,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.textPrimary,
+      marginBottom: theme.spacing.xs,
+    },
+    emptyStateSubtext: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+      paddingHorizontal: theme.spacing.xxl,
+    },
+  }));
 
   useFocusEffect(
     useCallback(() => {
@@ -299,7 +565,7 @@ const AllTransactionsScreen: React.FC = () => {
   if (isLoading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
         <Text style={styles.loadingText}>Loading transactions...</Text>
       </SafeAreaView>
     );
@@ -313,7 +579,7 @@ const AllTransactionsScreen: React.FC = () => {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="arrow-back" size={24} color={COLORS.textPrimary} />
+          <Ionicons name="arrow-back" size={24} color={theme.colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>All Transactions</Text>
         <View style={{ width: 40 }} />
@@ -330,7 +596,7 @@ const AllTransactionsScreen: React.FC = () => {
 
         <View style={styles.statItem}>
           <Text style={styles.statLabel}>Income</Text>
-          <Text style={[styles.statValue, { color: COLORS.success }]}>
+          <Text style={[styles.statValue, { color: theme.colors.success }]}>
             {formatCurrency(stats.totalIncome, currency)}
           </Text>
         </View>
@@ -339,7 +605,7 @@ const AllTransactionsScreen: React.FC = () => {
 
         <View style={styles.statItem}>
           <Text style={styles.statLabel}>Expense</Text>
-          <Text style={[styles.statValue, { color: COLORS.danger }]}>
+          <Text style={[styles.statValue, { color: theme.colors.danger }]}>
             {formatCurrency(stats.totalExpense, currency)}
           </Text>
         </View>
@@ -347,77 +613,80 @@ const AllTransactionsScreen: React.FC = () => {
 
       {/* Search Bar */}
       <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color={COLORS.textSecondary} style={styles.searchIcon} />
+        <Ionicons name="search" size={20} color={theme.colors.textSecondary} style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
           placeholder="Search transactions..."
-          placeholderTextColor={COLORS.textTertiary}
+          placeholderTextColor={theme.colors.textTertiary}
           value={searchQuery}
           onChangeText={handleSearchChange}
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity onPress={() => handleSearchChange('')}>
-            <Ionicons name="close-circle" size={20} color={COLORS.textSecondary} />
+            <Ionicons name="close-circle" size={20} color={theme.colors.textSecondary} />
           </TouchableOpacity>
         )}
       </View>
 
-      {/* Type Filter */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filterScrollContainer}
-        contentContainerStyle={styles.filterContainer}
-      >
-        {FILTER_OPTIONS.map((option) => (
-          <TouchableOpacity
-            key={option.value}
-            style={[
-              styles.filterChip,
-              selectedFilter === option.value && styles.filterChipActive,
-            ]}
-            onPress={() => handleFilterChange(option.value)}
-          >
-            <Text style={styles.filterIcon}>{option.icon}</Text>
-            <Text
+      {/* Filters Container - Fixed Height */}
+      <View style={styles.filtersWrapper}>
+        {/* Type Filter */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterScrollContainer}
+          contentContainerStyle={styles.filterContainer}
+        >
+          {FILTER_OPTIONS.map((option) => (
+            <TouchableOpacity
+              key={option.value}
               style={[
-                styles.filterLabel,
-                selectedFilter === option.value && styles.filterLabelActive,
+                styles.filterChip,
+                selectedFilter === option.value && styles.filterChipActive,
               ]}
+              onPress={() => handleFilterChange(option.value)}
             >
-              {option.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+              <Text style={styles.filterIcon}>{option.icon}</Text>
+              <Text
+                style={[
+                  styles.filterLabel,
+                  selectedFilter === option.value && styles.filterLabelActive,
+                ]}
+              >
+                {option.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
-      {/* Time Filter */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.timeFilterScrollContainer}
-        contentContainerStyle={styles.timeFilterContainer}
-      >
-        {TIME_FILTERS.map((option) => (
-          <TouchableOpacity
-            key={option.value}
-            style={[
-              styles.timeFilterChip,
-              selectedTimeFilter === option.value && styles.timeFilterChipActive,
-            ]}
-            onPress={() => handleTimeFilterChange(option.value)}
-          >
-            <Text
+        {/* Time Filter */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.timeFilterScrollContainer}
+          contentContainerStyle={styles.timeFilterContainer}
+        >
+          {TIME_FILTERS.map((option) => (
+            <TouchableOpacity
+              key={option.value}
               style={[
-                styles.timeFilterLabel,
-                selectedTimeFilter === option.value && styles.timeFilterLabelActive,
+                styles.timeFilterChip,
+                selectedTimeFilter === option.value && styles.timeFilterChipActive,
               ]}
+              onPress={() => handleTimeFilterChange(option.value)}
             >
-              {option.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+              <Text
+                style={[
+                  styles.timeFilterLabel,
+                  selectedTimeFilter === option.value && styles.timeFilterLabelActive,
+                ]}
+              >
+                {option.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
 
       {/* Transactions List */}
       <FlatList
@@ -442,247 +711,5 @@ const AllTransactionsScreen: React.FC = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  loadingText: {
-    marginTop: SPACING.md,
-    fontSize: FONT_SIZE.md,
-    color: COLORS.textSecondary,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: BORDER_RADIUS.round,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: FONT_SIZE.xl,
-    fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.textPrimary,
-  },
-  statsCard: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.surface,
-    marginHorizontal: SPACING.lg,
-    marginTop: SPACING.md,
-    marginBottom: SPACING.md,
-    paddingVertical: SPACING.lg,
-    borderRadius: BORDER_RADIUS.lg,
-    ...SHADOWS.sm,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: COLORS.border,
-  },
-  statLabel: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.xs,
-  },
-  statValue: {
-    fontSize: FONT_SIZE.lg,
-    fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.textPrimary,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    marginHorizontal: SPACING.lg,
-    marginBottom: SPACING.md,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.lg,
-    ...SHADOWS.sm,
-  },
-  searchIcon: {
-    marginRight: SPACING.sm,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: FONT_SIZE.md,
-    color: COLORS.textPrimary,
-    paddingVertical: SPACING.xs,
-  },
-  filterScrollContainer: {
-    marginBottom: SPACING.lg,
-    marginTop: SPACING.xs,
-  },
-  filterContainer: {
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm,
-  },
-  filterChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: SPACING.xl,
-    paddingVertical: SPACING.md,
-    marginRight: SPACING.md,
-    borderRadius: BORDER_RADIUS.xl,
-    backgroundColor: COLORS.surface,
-    borderWidth: 2,
-    borderColor: COLORS.border,
-    minWidth: 110,
-    ...SHADOWS.md,
-  },
-  filterChipActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-    transform: [{ scale: 1.05 }],
-  },
-  filterIcon: {
-    fontSize: 20,
-    marginRight: 8,
-  },
-  filterLabel: {
-    fontSize: 16,
-    fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.textSecondary,
-    includeFontPadding: false,
-    textAlignVertical: 'center',
-  },
-  filterLabelActive: {
-    color: COLORS.textWhite,
-  },
-  timeFilterScrollContainer: {
-    marginBottom: SPACING.md,
-  },
-  timeFilterContainer: {
-    paddingHorizontal: SPACING.lg,
-  },
-  timeFilterChip: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs,
-    marginRight: SPACING.sm,
-    borderRadius: BORDER_RADIUS.md,
-    backgroundColor: COLORS.backgroundSecondary,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  timeFilterChipActive: {
-    backgroundColor: COLORS.primaryLight,
-    borderColor: COLORS.primary,
-  },
-  timeFilterLabel: {
-    fontSize: FONT_SIZE.xs,
-    fontWeight: FONT_WEIGHT.medium,
-    color: COLORS.textSecondary,
-  },
-  timeFilterLabelActive: {
-    color: COLORS.primary,
-    fontWeight: FONT_WEIGHT.bold,
-  },
-  listContent: {
-    paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.xxl,
-  },
-  transactionCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-    borderRadius: BORDER_RADIUS.lg,
-    ...SHADOWS.sm,
-  },
-  transactionLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  transactionIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: BORDER_RADIUS.round,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: SPACING.md,
-  },
-  transactionIconText: {
-    fontSize: FONT_SIZE.xxl,
-  },
-  transactionInfo: {
-    flex: 1,
-  },
-  transactionCategory: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.textPrimary,
-    marginBottom: 2,
-  },
-  transactionNote: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
-    marginBottom: 2,
-  },
-  transactionDate: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textTertiary,
-  },
-  transactionRight: {
-    alignItems: 'flex-end',
-  },
-  transactionAmount: {
-    fontSize: FONT_SIZE.lg,
-    fontWeight: FONT_WEIGHT.bold,
-  },
-  incomeAmount: {
-    color: COLORS.success,
-  },
-  expenseAmount: {
-    color: COLORS.danger,
-  },
-  separator: {
-    height: SPACING.sm,
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  emptyStateIcon: {
-    fontSize: 64,
-    marginBottom: SPACING.lg,
-  },
-  emptyStateText: {
-    fontSize: FONT_SIZE.lg,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.textPrimary,
-    marginBottom: SPACING.xs,
-  },
-  emptyStateSubtext: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    paddingHorizontal: SPACING.xxl,
-  },
-});
 
 export default AllTransactionsScreen;

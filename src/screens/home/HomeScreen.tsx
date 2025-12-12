@@ -18,9 +18,11 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { HomeStackParamList } from '../../navigation/types';
 import { supabase } from '../../services/supabase';
 import { useAuthStore } from '../../stores/authStore';
+import { useThemeStore } from '../../stores/themeStore';
+import { usePendingTransactionsStore } from '../../stores/pendingTransactionsStore';
 import { Transaction } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/helpers';
-import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT, SHADOWS } from '../../theme/modernTheme';
+import { useThemedStyles } from '../../hooks/useThemedStyles';
 
 type HomeScreenNavigationProp = StackNavigationProp<HomeStackParamList, 'Home'>;
 
@@ -33,6 +35,9 @@ interface BalanceSummary {
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const { user } = useAuthStore();
+  const { theme } = useThemeStore();
+  const { pendingTransactions, fetchPending, subscribeToRealtimeUpdates, unsubscribeFromRealtime } =
+    usePendingTransactionsStore();
 
   const [balance, setBalance] = useState<BalanceSummary>({
     totalIncome: 0,
@@ -43,11 +48,288 @@ const HomeScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [currency, setCurrency] = useState('VND');
+  const [fullName, setFullName] = useState<string | null>(null);
+
+  // Create themed styles
+  const styles = useThemedStyles((theme) => StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: theme.colors.background,
+    },
+    loadingText: {
+      marginTop: theme.spacing.md,
+      fontSize: theme.fontSize.md,
+      color: theme.colors.textSecondary,
+    },
+    scrollContent: {
+      padding: theme.spacing.lg,
+      paddingBottom: 100,
+    },
+    header: {
+      marginBottom: theme.spacing.xl,
+    },
+    greeting: {
+      fontSize: theme.fontSize.xxxl,
+      fontWeight: theme.fontWeight.bold,
+      color: theme.colors.textPrimary,
+      marginBottom: theme.spacing.xs,
+    },
+    subtitle: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textSecondary,
+    },
+    balanceCard: {
+      borderRadius: theme.borderRadius.xl,
+      padding: theme.spacing.xxl,
+      marginBottom: theme.spacing.lg,
+      ...theme.shadows.lg,
+    },
+    balanceHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: theme.spacing.md,
+    },
+    balanceLabel: {
+      fontSize: theme.fontSize.md,
+      color: theme.colors.textWhite,
+      fontWeight: theme.fontWeight.semibold,
+    },
+    balanceBadge: {
+      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.xs,
+      borderRadius: theme.borderRadius.md,
+    },
+    balanceBadgeText: {
+      fontSize: theme.fontSize.xs,
+      color: theme.colors.textWhite,
+      fontWeight: theme.fontWeight.semibold,
+    },
+    balanceAmount: {
+      fontSize: theme.fontSize.massive,
+      fontWeight: theme.fontWeight.extrabold,
+      color: theme.colors.textWhite,
+      marginBottom: theme.spacing.xxl,
+    },
+    balanceNegative: {
+      color: theme.colors.dangerLight, // Dynamic theme color instead of hardcoded
+    },
+    balanceRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
+    balanceItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    balanceIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: theme.borderRadius.round,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: theme.spacing.md,
+    },
+    incomeIcon: {},
+    expenseIcon: {},
+    balanceIconText: {
+      fontSize: theme.fontSize.xl,
+      color: theme.colors.textWhite,
+      fontWeight: theme.fontWeight.bold,
+    },
+    balanceItemLabel: {
+      fontSize: theme.fontSize.xs,
+      color: theme.colors.textWhite,
+      opacity: 0.9,
+      marginBottom: theme.spacing.xs,
+    },
+    balanceItemAmount: {
+      fontSize: theme.fontSize.md,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.textWhite,
+    },
+    quickActionsSection: {
+      marginBottom: theme.spacing.xl,
+    },
+    quickActionsGrid: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      gap: theme.spacing.sm,
+    },
+    quickActionCard: {
+      flex: 1,
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.md,
+      alignItems: 'center',
+      ...theme.shadows.sm,
+    },
+    quickActionIcon: {
+      width: 56,
+      height: 56,
+      borderRadius: theme.borderRadius.round,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: theme.spacing.sm,
+    },
+    quickActionIconText: {
+      fontSize: theme.fontSize.xxl,
+    },
+    quickActionLabel: {
+      fontSize: theme.fontSize.xs,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.textPrimary,
+      textAlign: 'center',
+    },
+    transactionsSection: {
+      marginBottom: theme.spacing.lg,
+    },
+    transactionsHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: theme.spacing.lg,
+    },
+    sectionTitle: {
+      fontSize: theme.fontSize.xl,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.textPrimary,
+    },
+    seeAllText: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.primary,
+      fontWeight: theme.fontWeight.medium,
+    },
+    emptyState: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.huge,
+      alignItems: 'center',
+      ...theme.shadows.sm,
+    },
+    emptyStateIcon: {
+      fontSize: 56,
+      marginBottom: theme.spacing.lg,
+    },
+    emptyStateText: {
+      fontSize: theme.fontSize.lg,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.textPrimary,
+      marginBottom: theme.spacing.xs,
+    },
+    emptyStateSubtext: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textSecondary,
+      textAlign: 'center',
+    },
+    transactionCard: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.lg,
+      marginBottom: theme.spacing.sm,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      ...theme.shadows.md,
+    },
+    transactionLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    transactionIcon: {
+      width: 52,
+      height: 52,
+      borderRadius: theme.borderRadius.round,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: theme.spacing.md,
+    },
+    transactionIconText: {
+      fontSize: theme.fontSize.xxl,
+    },
+    transactionInfo: {
+      flex: 1,
+    },
+    transactionCategory: {
+      fontSize: theme.fontSize.md,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.textPrimary,
+      marginBottom: theme.spacing.xs,
+    },
+    transactionNote: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textSecondary,
+    },
+    transactionRight: {
+      alignItems: 'flex-end',
+    },
+    transactionAmount: {
+      fontSize: theme.fontSize.md,
+      fontWeight: theme.fontWeight.semibold,
+      marginBottom: theme.spacing.xs,
+    },
+    incomeAmount: {
+      color: theme.colors.success,
+    },
+    expenseAmount: {
+      color: theme.colors.danger,
+    },
+    transactionDate: {
+      fontSize: theme.fontSize.xs,
+      color: theme.colors.textTertiary,
+    },
+    // Pending transactions banner styles
+    pendingBanner: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      backgroundColor: theme.colors.warning + '20',
+      padding: theme.spacing.lg,
+      borderRadius: theme.borderRadius.lg,
+      marginBottom: theme.spacing.lg,
+      borderLeftWidth: 4,
+      borderLeftColor: theme.colors.warning,
+      ...theme.shadows.sm,
+    },
+    pendingLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    pendingIcon: {
+      fontSize: 32,
+      marginRight: theme.spacing.md,
+    },
+    pendingTitle: {
+      fontSize: theme.fontSize.md,
+      fontWeight: theme.fontWeight.semibold,
+      color: theme.colors.textPrimary,
+    },
+    pendingSubtitle: {
+      fontSize: theme.fontSize.sm,
+      color: theme.colors.textSecondary,
+      marginTop: 2,
+    },
+    pendingArrow: {
+      fontSize: 28,
+      color: theme.colors.textSecondary,
+      fontWeight: theme.fontWeight.bold,
+    },
+  }));
 
   // Get dynamic greeting based on time of day
   const getGreeting = () => {
     const hour = new Date().getHours();
-    const username = user?.email?.split('@')[0] || 'there';
+    // Use full name from profile, fallback to email username if not set
+    const username = fullName || user?.email?.split('@')[0] || 'there';
 
     let timeGreeting = '';
     let emoji = '';
@@ -85,23 +367,24 @@ const HomeScreen: React.FC = () => {
     return messages[dayOfYear % messages.length];
   };
 
-  // Fetch user currency
-  const fetchUserCurrency = async () => {
+  // Fetch user profile (currency and name)
+  const fetchUserProfile = async () => {
     if (!user) return;
 
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('currency')
+        .select('currency, name')
         .eq('id', user.id)
         .single();
 
       if (error) throw error;
       if (data) {
         setCurrency(data.currency);
+        setFullName(data.name);
       }
     } catch (error: any) {
-      console.error('Error fetching currency:', error);
+      console.error('Error fetching profile:', error);
     }
   };
 
@@ -178,7 +461,7 @@ const HomeScreen: React.FC = () => {
   // Load all data
   const loadData = async () => {
     setIsLoading(true);
-    await Promise.all([fetchUserCurrency(), fetchBalance(), fetchTransactions()]);
+    await Promise.all([fetchUserProfile(), fetchBalance(), fetchTransactions()]);
     setIsLoading(false);
   };
 
@@ -199,6 +482,32 @@ const HomeScreen: React.FC = () => {
       loadData();
     }, [])
   );
+
+  // Fetch and subscribe to pending transactions
+  useEffect(() => {
+    if (user) {
+      console.log('📡 HomeScreen: Setting up pending transactions for user:', user.id);
+      fetchPending(user.id);
+      subscribeToRealtimeUpdates(user.id);
+
+      return () => {
+        console.log('📴 HomeScreen: Cleaning up pending transactions subscription');
+        unsubscribeFromRealtime();
+      };
+    }
+
+    return () => {
+      unsubscribeFromRealtime();
+    };
+  }, [user]);
+
+  // Debug: Log pending transactions count when it changes
+  useEffect(() => {
+    console.log('📊 HomeScreen: Pending transactions count:', pendingTransactions.length);
+    if (pendingTransactions.length > 0) {
+      console.log('📥 Pending transactions:', pendingTransactions);
+    }
+  }, [pendingTransactions]);
 
   // Navigate to add transaction
   const handleAddTransaction = () => {
@@ -225,10 +534,15 @@ const HomeScreen: React.FC = () => {
     navigation.navigate('AllTransactions');
   };
 
+  // Navigate to pending transactions
+  const handlePendingTransactions = () => {
+    navigation.navigate('PendingTransactions');
+  };
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#3B82F6" />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
         <Text style={styles.loadingText}>Loading...</Text>
       </SafeAreaView>
     );
@@ -251,9 +565,28 @@ const HomeScreen: React.FC = () => {
           <Text style={styles.subtitle}>{getMotivationalMessage()}</Text>
         </View>
 
+        {/* Pending Transactions Banner */}
+        {pendingTransactions.length > 0 && (
+          <TouchableOpacity
+            style={styles.pendingBanner}
+            onPress={handlePendingTransactions}
+          >
+            <View style={styles.pendingLeft}>
+              <Text style={styles.pendingIcon}>📥</Text>
+              <View>
+                <Text style={styles.pendingTitle}>
+                  {pendingTransactions.length} pending transaction{pendingTransactions.length > 1 ? 's' : ''}
+                </Text>
+                <Text style={styles.pendingSubtitle}>Tap to review</Text>
+              </View>
+            </View>
+            <Text style={styles.pendingArrow}>›</Text>
+          </TouchableOpacity>
+        )}
+
         {/* Balance Card with Gradient */}
         <LinearGradient
-          colors={[COLORS.primary, COLORS.primaryDark, COLORS.secondary]}
+          colors={[theme.colors.primary, theme.colors.primaryDark, theme.colors.secondary]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.balanceCard}
@@ -279,7 +612,7 @@ const HomeScreen: React.FC = () => {
           <View style={styles.balanceRow}>
             <View style={styles.balanceItem}>
               <LinearGradient
-                colors={[COLORS.success, COLORS.successDark]}
+                colors={[theme.colors.success, theme.colors.successDark]}
                 style={[styles.balanceIcon, styles.incomeIcon]}
               >
                 <Text style={styles.balanceIconText}>↓</Text>
@@ -294,7 +627,7 @@ const HomeScreen: React.FC = () => {
 
             <View style={styles.balanceItem}>
               <LinearGradient
-                colors={[COLORS.danger, COLORS.dangerDark]}
+                colors={[theme.colors.danger, theme.colors.dangerDark]}
                 style={[styles.balanceIcon, styles.expenseIcon]}
               >
                 <Text style={styles.balanceIconText}>↑</Text>
@@ -316,7 +649,7 @@ const HomeScreen: React.FC = () => {
               style={styles.quickActionCard}
               onPress={handleAddExpense}
             >
-              <View style={[styles.quickActionIcon, { backgroundColor: COLORS.primary + '20' }]}>
+              <View style={[styles.quickActionIcon, { backgroundColor: theme.colors.primary + '20' }]}>
                 <Text style={styles.quickActionIconText}>💸</Text>
               </View>
               <Text style={styles.quickActionLabel}>Add Expense</Text>
@@ -326,7 +659,7 @@ const HomeScreen: React.FC = () => {
               style={styles.quickActionCard}
               onPress={handleAddIncome}
             >
-              <View style={[styles.quickActionIcon, { backgroundColor: COLORS.success + '20' }]}>
+              <View style={[styles.quickActionIcon, { backgroundColor: theme.colors.success + '20' }]}>
                 <Text style={styles.quickActionIconText}>💰</Text>
               </View>
               <Text style={styles.quickActionLabel}>Add Income</Text>
@@ -336,7 +669,7 @@ const HomeScreen: React.FC = () => {
               style={styles.quickActionCard}
               onPress={handleSeeAllTransactions}
             >
-              <View style={[styles.quickActionIcon, { backgroundColor: COLORS.secondary + '20' }]}>
+              <View style={[styles.quickActionIcon, { backgroundColor: theme.colors.secondary + '20' }]}>
                 <Text style={styles.quickActionIconText}>📊</Text>
               </View>
               <Text style={styles.quickActionLabel}>View All</Text>
@@ -353,7 +686,7 @@ const HomeScreen: React.FC = () => {
                 );
               }}
             >
-              <View style={[styles.quickActionIcon, { backgroundColor: COLORS.warning + '20' }]}>
+              <View style={[styles.quickActionIcon, { backgroundColor: theme.colors.warning + '20' }]}>
                 <Text style={styles.quickActionIconText}>🎯</Text>
               </View>
               <Text style={styles.quickActionLabel}>Budgets</Text>
@@ -429,246 +762,5 @@ const HomeScreen: React.FC = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  loadingText: {
-    marginTop: SPACING.md,
-    fontSize: FONT_SIZE.md,
-    color: COLORS.textSecondary,
-  },
-  scrollContent: {
-    padding: SPACING.lg,
-    paddingBottom: 100,
-  },
-  header: {
-    marginBottom: SPACING.xl,
-  },
-  greeting: {
-    fontSize: FONT_SIZE.xxxl,
-    fontWeight: FONT_WEIGHT.bold,
-    color: COLORS.textPrimary,
-    marginBottom: SPACING.xs,
-  },
-  subtitle: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
-  },
-  balanceCard: {
-    borderRadius: BORDER_RADIUS.xl,
-    padding: SPACING.xxl,
-    marginBottom: SPACING.lg,
-    ...SHADOWS.lg,
-  },
-  balanceHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.md,
-  },
-  balanceLabel: {
-    fontSize: FONT_SIZE.md,
-    color: COLORS.textWhite,
-    fontWeight: FONT_WEIGHT.semibold,
-  },
-  balanceBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs,
-    borderRadius: BORDER_RADIUS.md,
-  },
-  balanceBadgeText: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textWhite,
-    fontWeight: FONT_WEIGHT.semibold,
-  },
-  balanceAmount: {
-    fontSize: FONT_SIZE.massive,
-    fontWeight: FONT_WEIGHT.extrabold,
-    color: COLORS.textWhite,
-    marginBottom: SPACING.xxl,
-  },
-  balanceNegative: {
-    color: '#FCA5A5',
-  },
-  balanceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  balanceItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  balanceIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: BORDER_RADIUS.round,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: SPACING.md,
-  },
-  incomeIcon: {
-    // Gradient applied
-  },
-  expenseIcon: {
-    // Gradient applied
-  },
-  balanceIconText: {
-    fontSize: FONT_SIZE.xl,
-    color: COLORS.textWhite,
-    fontWeight: FONT_WEIGHT.bold,
-  },
-  balanceItemLabel: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textWhite,
-    opacity: 0.9,
-    marginBottom: SPACING.xs,
-  },
-  balanceItemAmount: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.textWhite,
-  },
-  quickActionsSection: {
-    marginBottom: SPACING.xl,
-  },
-  quickActionsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: SPACING.sm,
-  },
-  quickActionCard: {
-    flex: 1,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.md,
-    alignItems: 'center',
-    ...SHADOWS.sm,
-  },
-  quickActionIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: BORDER_RADIUS.round,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: SPACING.sm,
-  },
-  quickActionIconText: {
-    fontSize: FONT_SIZE.xxl,
-  },
-  quickActionLabel: {
-    fontSize: FONT_SIZE.xs,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.textPrimary,
-    textAlign: 'center',
-  },
-  transactionsSection: {
-    marginBottom: SPACING.lg,
-  },
-  transactionsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.lg,
-  },
-  sectionTitle: {
-    fontSize: FONT_SIZE.xl,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.textPrimary,
-  },
-  seeAllText: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.primary,
-    fontWeight: FONT_WEIGHT.medium,
-  },
-  emptyState: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.huge,
-    alignItems: 'center',
-    ...SHADOWS.sm,
-  },
-  emptyStateIcon: {
-    fontSize: 56,
-    marginBottom: SPACING.lg,
-  },
-  emptyStateText: {
-    fontSize: FONT_SIZE.lg,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.textPrimary,
-    marginBottom: SPACING.xs,
-  },
-  emptyStateSubtext: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-  },
-  transactionCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
-    marginBottom: SPACING.sm,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    ...SHADOWS.md,
-  },
-  transactionLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  transactionIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: BORDER_RADIUS.round,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: SPACING.md,
-  },
-  transactionIconText: {
-    fontSize: FONT_SIZE.xxl,
-  },
-  transactionInfo: {
-    flex: 1,
-  },
-  transactionCategory: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.semibold,
-    color: COLORS.textPrimary,
-    marginBottom: SPACING.xs,
-  },
-  transactionNote: {
-    fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
-  },
-  transactionRight: {
-    alignItems: 'flex-end',
-  },
-  transactionAmount: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: FONT_WEIGHT.semibold,
-    marginBottom: SPACING.xs,
-  },
-  incomeAmount: {
-    color: COLORS.success,
-  },
-  expenseAmount: {
-    color: COLORS.danger,
-  },
-  transactionDate: {
-    fontSize: FONT_SIZE.xs,
-    color: COLORS.textTertiary,
-  },
-});
 
 export default HomeScreen;

@@ -1,7 +1,10 @@
 // Modern Theme Configuration
 // Vibrant colors, consistent spacing, and modern design tokens
 
-export const COLORS = {
+// ========================================
+// LIGHT THEME COLORS
+// ========================================
+export const LIGHT_COLORS = {
   // Primary Brand Colors - Vibrant Blue Gradient
   primary: '#3B82F6',
   primaryDark: '#2563EB',
@@ -52,10 +55,80 @@ export const COLORS = {
   textDisabled: '#D1D5DB',
   textWhite: '#FFFFFF',
 
+  // Backwards Compatibility Aliases
+  text: '#1F2937', // Alias for textPrimary
+  white: '#FFFFFF', // Alias for surface
+
   // Overlay
   overlay: 'rgba(0, 0, 0, 0.5)',
   overlayLight: 'rgba(0, 0, 0, 0.25)',
 };
+
+// ========================================
+// DARK THEME COLORS
+// ========================================
+export const DARK_COLORS = {
+  // Primary Brand Colors - Lighter in dark mode for better contrast
+  primary: '#60A5FA',
+  primaryDark: '#3B82F6',
+  primaryLight: '#93C5FD',
+  primaryGradient: ['#60A5FA', '#3B82F6'],
+
+  // Secondary Colors - Lighter Purple
+  secondary: '#A78BFA',
+  secondaryDark: '#8B5CF6',
+  secondaryLight: '#C4B5FD',
+  secondaryGradient: ['#A78BFA', '#8B5CF6'],
+
+  // Success/Income - Lighter Green
+  success: '#34D399',
+  successDark: '#10B981',
+  successLight: '#6EE7B7',
+  successGradient: ['#34D399', '#10B981'],
+
+  // Danger/Expense - Lighter Red
+  danger: '#F87171',
+  dangerDark: '#EF4444',
+  dangerLight: '#FCA5A5',
+  dangerGradient: ['#F87171', '#EF4444'],
+
+  // Warning - Lighter Amber
+  warning: '#FBBF24',
+  warningDark: '#F59E0B',
+  warningLight: '#FCD34D',
+  warningGradient: ['#FBBF24', '#F59E0B'],
+
+  // Info - Lighter Cyan
+  info: '#22D3EE',
+  infoDark: '#06B6D4',
+  infoLight: '#67E8F9',
+  infoGradient: ['#22D3EE', '#06B6D4'],
+
+  // Neutral Colors - Dark Gray Scale
+  background: '#111827', // Very dark background
+  surface: '#1F2937', // Slightly lighter surface
+  surfaceHover: '#374151', // Hover state
+  border: '#4B5563', // Border color
+  borderDark: '#6B7280', // Darker border
+
+  // Text Colors - Light text on dark background
+  textPrimary: '#F9FAFB', // Almost white
+  textSecondary: '#D1D5DB', // Light gray
+  textTertiary: '#9CA3AF', // Medium gray
+  textDisabled: '#6B7280', // Dark gray
+  textWhite: '#FFFFFF', // Pure white
+
+  // Backwards Compatibility Aliases
+  text: '#F9FAFB', // Alias for textPrimary
+  white: '#1F2937', // In dark mode, "white" surfaces are dark
+
+  // Overlay
+  overlay: 'rgba(0, 0, 0, 0.75)', // Darker overlay for dark mode
+  overlayLight: 'rgba(0, 0, 0, 0.5)',
+};
+
+// Default export for backwards compatibility
+export const COLORS = LIGHT_COLORS;
 
 export const SPACING = {
   xs: 4,
@@ -75,6 +148,7 @@ export const BORDER_RADIUS = {
   xl: 20,
   xxl: 24,
   round: 9999,
+  full: 9999, // Alias for round (backwards compatibility)
 };
 
 export const FONT_SIZE = {
@@ -274,4 +348,166 @@ export const createGradient = (colors: string[]) => {
 export const addOpacity = (hexColor: string, opacity: number): string => {
   const alpha = Math.round(opacity * 255);
   return `${hexColor}${alpha.toString(16).padStart(2, '0')}`;
+};
+
+// ========================================
+// THEME TYPE DEFINITION
+// ========================================
+export type Theme = {
+  colors: typeof LIGHT_COLORS;
+  spacing: typeof SPACING;
+  borderRadius: typeof BORDER_RADIUS;
+  fontSize: typeof FONT_SIZE;
+  fontWeight: typeof FONT_WEIGHT;
+  shadows: typeof SHADOWS;
+  cardStyles: typeof CARD_STYLES;
+  buttonStyles: typeof BUTTON_STYLES;
+  headerStyles: typeof HEADER_STYLES;
+  emptyStateStyles: typeof EMPTY_STATE_STYLES;
+  animation: typeof ANIMATION;
+  isDark: boolean;
+};
+
+// ========================================
+// THEME OBJECTS
+// ========================================
+export const lightTheme: Theme = {
+  colors: LIGHT_COLORS,
+  spacing: SPACING,
+  borderRadius: BORDER_RADIUS,
+  fontSize: FONT_SIZE,
+  fontWeight: FONT_WEIGHT,
+  shadows: SHADOWS,
+  cardStyles: CARD_STYLES,
+  buttonStyles: BUTTON_STYLES,
+  headerStyles: HEADER_STYLES,
+  emptyStateStyles: EMPTY_STATE_STYLES,
+  animation: ANIMATION,
+  isDark: false,
+};
+
+export const darkTheme: Theme = {
+  colors: DARK_COLORS,
+  spacing: SPACING,
+  borderRadius: BORDER_RADIUS,
+  fontSize: FONT_SIZE,
+  fontWeight: FONT_WEIGHT,
+  shadows: SHADOWS,
+  // Card styles need to use dark colors
+  cardStyles: {
+    default: {
+      backgroundColor: DARK_COLORS.surface,
+      borderRadius: BORDER_RADIUS.lg,
+      padding: SPACING.lg,
+      ...SHADOWS.md,
+    },
+    elevated: {
+      backgroundColor: DARK_COLORS.surface,
+      borderRadius: BORDER_RADIUS.lg,
+      padding: SPACING.lg,
+      ...SHADOWS.lg,
+    },
+    outlined: {
+      backgroundColor: DARK_COLORS.surface,
+      borderRadius: BORDER_RADIUS.lg,
+      padding: SPACING.lg,
+      borderWidth: 1,
+      borderColor: DARK_COLORS.border,
+    },
+  },
+  // Button styles with dark colors
+  buttonStyles: {
+    primary: {
+      backgroundColor: DARK_COLORS.primary,
+      borderRadius: BORDER_RADIUS.md,
+      paddingVertical: SPACING.md,
+      paddingHorizontal: SPACING.xl,
+      ...SHADOWS.sm,
+    },
+    secondary: {
+      backgroundColor: DARK_COLORS.secondary,
+      borderRadius: BORDER_RADIUS.md,
+      paddingVertical: SPACING.md,
+      paddingHorizontal: SPACING.xl,
+      ...SHADOWS.sm,
+    },
+    success: {
+      backgroundColor: DARK_COLORS.success,
+      borderRadius: BORDER_RADIUS.md,
+      paddingVertical: SPACING.md,
+      paddingHorizontal: SPACING.xl,
+      ...SHADOWS.sm,
+    },
+    danger: {
+      backgroundColor: DARK_COLORS.danger,
+      borderRadius: BORDER_RADIUS.md,
+      paddingVertical: SPACING.md,
+      paddingHorizontal: SPACING.xl,
+      ...SHADOWS.sm,
+    },
+    outlined: {
+      backgroundColor: 'transparent',
+      borderRadius: BORDER_RADIUS.md,
+      paddingVertical: SPACING.md,
+      paddingHorizontal: SPACING.xl,
+      borderWidth: 2,
+      borderColor: DARK_COLORS.primary,
+    },
+    ghost: {
+      backgroundColor: 'transparent',
+      borderRadius: BORDER_RADIUS.md,
+      paddingVertical: SPACING.md,
+      paddingHorizontal: SPACING.xl,
+    },
+  },
+  // Header styles with dark colors
+  headerStyles: {
+    container: {
+      flexDirection: 'row' as const,
+      justifyContent: 'space-between' as const,
+      alignItems: 'center' as const,
+      padding: SPACING.lg,
+      backgroundColor: DARK_COLORS.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: DARK_COLORS.border,
+    },
+    title: {
+      fontSize: FONT_SIZE.xxxl,
+      fontWeight: FONT_WEIGHT.bold,
+      color: DARK_COLORS.textPrimary,
+    },
+    subtitle: {
+      fontSize: FONT_SIZE.sm,
+      color: DARK_COLORS.textSecondary,
+      marginTop: SPACING.xs,
+    },
+  },
+  // Empty state styles with dark colors
+  emptyStateStyles: {
+    container: {
+      backgroundColor: DARK_COLORS.surface,
+      borderRadius: BORDER_RADIUS.lg,
+      padding: SPACING.huge,
+      alignItems: 'center' as const,
+      marginTop: SPACING.huge,
+    },
+    icon: {
+      fontSize: 64,
+      marginBottom: SPACING.lg,
+    },
+    title: {
+      fontSize: FONT_SIZE.lg,
+      fontWeight: FONT_WEIGHT.semibold,
+      color: DARK_COLORS.textPrimary,
+      marginBottom: SPACING.sm,
+    },
+    subtitle: {
+      fontSize: FONT_SIZE.sm,
+      color: DARK_COLORS.textSecondary,
+      textAlign: 'center' as const,
+      marginBottom: SPACING.xxl,
+    },
+  },
+  animation: ANIMATION,
+  isDark: true,
 };

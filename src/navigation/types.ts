@@ -37,7 +37,19 @@ export type HomeStackParamList = {
   Home: undefined;
   AllTransactions: undefined;
   TransactionDetail: { transactionId: string };
-  AddTransaction: { transactionId?: string; initialType?: 'income' | 'expense' };
+  AddTransaction: {
+    transactionId?: string;
+    initialType?: 'income' | 'expense';
+    fromPending?: {
+      pendingId: string;
+      type: 'income' | 'expense';
+      amount: number;
+      categoryId?: string;
+      note?: string;
+      date: string;
+    };
+  };
+  PendingTransactions: undefined;
 };
 
 // Budget Stack Navigator
@@ -45,6 +57,8 @@ export type BudgetStackParamList = {
   Budget: undefined;
   BudgetDetail: { budgetId: string };
   AddBudget: { budgetId?: string };
+  AddGoal: { goalId?: string };
+  GoalDetail: { goalId: string };
 };
 
 // Goals Stack Navigator
@@ -67,5 +81,9 @@ export type ProfileStackParamList = {
   Settings: undefined;
   Security: undefined;
   Categories: undefined;
-  CategoryForm: { categoryId?: string };
+  CategoryForm: {
+    categoryId?: string;
+    suggestedName?: string;
+    type?: 'income' | 'expense';
+  };
 };

@@ -2,6 +2,7 @@
 // Handles general conversation with context awareness about the finance app
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -239,7 +240,7 @@ serve(async (req) => {
       console.log('📏 Financial context length:', financialContext.length, 'characters');
     }
 
-    // Get Google Gemini API key
+    // Get Google Gemini API key from environment
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
     if (!geminiApiKey) {
       console.error('GEMINI_API_KEY not set');
@@ -282,7 +283,7 @@ serve(async (req) => {
     let geminiResponse;
     try {
       geminiResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
         {
           method: 'POST',
           headers: {
@@ -294,7 +295,7 @@ serve(async (req) => {
             }],
             generationConfig: {
               temperature: 0.7,
-              maxOutputTokens: financialContext ? 800 : 200, // More tokens for financial advice
+              maxOutputTokens: financialContext ? 2048 : 1024, // Increased for better responses
             }
           }),
         }
