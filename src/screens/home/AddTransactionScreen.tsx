@@ -1,6 +1,6 @@
 // Add/Edit Transaction Screen - With Form and Chat Tabs
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -81,6 +81,11 @@ const AddTransactionScreen: React.FC = () => {
     deficit: 0,
   });
   const [currency, setCurrency] = useState('VND');
+
+  // Track if editing from chat and store the original transaction for callback
+  const [editingFromChat, setEditingFromChat] = useState(false);
+  const [chatTransactionRef, setChatTransactionRef] = useState<any>(null);
+  const chatInterfaceRef = useRef<any>(null);
 
   const styles = useThemedStyles((theme) => StyleSheet.create({
     container: {
@@ -721,9 +726,18 @@ const AddTransactionScreen: React.FC = () => {
           }
         }
 
-        Alert.alert('Success', 'Transaction added successfully', [
-          { text: 'OK', onPress: () => navigation.goBack() }
-        ]);
+        // If transaction was edited from chat, notify ChatInterface and switch back
+        if (editingFromChat && chatTransactionRef && chatInterfaceRef.current) {
+          chatInterfaceRef.current.markTransactionAsSaved(chatTransactionRef);
+          setEditingFromChat(false);
+          setChatTransactionRef(null);
+          setActiveTab('chat');
+          Alert.alert('Success', 'Transaction saved successfully!');
+        } else {
+          Alert.alert('Success', 'Transaction added successfully', [
+            { text: 'OK', onPress: () => navigation.goBack() }
+          ]);
+        }
       }
     } catch (error: any) {
       console.error('Error saving transaction:', error);
@@ -746,6 +760,10 @@ const AddTransactionScreen: React.FC = () => {
     setSelectedCategory(transaction.category_id || null);
     setNote(transaction.note || '');
     setDate(transaction.date ? new Date(transaction.date) : new Date());
+
+    // Store reference that this is from chat for callback after save
+    setEditingFromChat(true);
+    setChatTransactionRef(transaction);
 
     // Switch to form tab
     setActiveTab('form');
@@ -1020,6 +1038,7 @@ const AddTransactionScreen: React.FC = () => {
           keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
         >
           <ChatInterface
+            ref={chatInterfaceRef}
             onTransactionSaved={handleTransactionSaved}
             onEditTransaction={handleEditFromChat}
             onCreateCategory={handleCreateCategory}

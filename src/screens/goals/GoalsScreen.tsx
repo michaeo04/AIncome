@@ -20,6 +20,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { formatCurrency, formatDate } from '../../utils/helpers';
 import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT, SHADOWS } from '../../theme/modernTheme';
 import { differenceInDays, differenceInMonths } from 'date-fns';
+import { getAvailableBalance, getGoalsWithProgress } from '../../services/goalAllocationService';
 
 type GoalsScreenNavigationProp = StackNavigationProp<GoalsStackParamList, 'Goals'>;
 
@@ -46,7 +47,8 @@ const GoalsScreen: React.FC = () => {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [currency, setCurrency] = useState('VND');
   const [netBalance, setNetBalance] = useState(0);
-  const [totalGoalCommitments, setTotalGoalCommitments] = useState(0);
+  const [allocatedBalance, setAllocatedBalance] = useState(0);
+  const [availableBalance, setAvailableBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -58,7 +60,7 @@ const GoalsScreen: React.FC = () => {
 
   const loadData = async () => {
     setIsLoading(true);
-    await Promise.all([fetchGoals(), fetchUserCurrency(), calculateNetBalance()]);
+    await Promise.all([fetchGoals(), fetchUserCurrency(), fetchBalances()]);
     setIsLoading(false);
   };
 
@@ -85,32 +87,19 @@ const GoalsScreen: React.FC = () => {
     }
   };
 
-  const calculateNetBalance = async () => {
+  const fetchBalances = async () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('type, amount')
-        .eq('user_id', user.id);
+      const balanceData = await getAvailableBalance(user.id);
 
-      if (error) throw error;
-
-      const income = data
-        ? data
-            .filter((t) => t.type === 'income')
-            .reduce((sum, t) => sum + Number(t.amount), 0)
-        : 0;
-
-      const expense = data
-        ? data
-            .filter((t) => t.type === 'expense')
-            .reduce((sum, t) => sum + Number(t.amount), 0)
-        : 0;
-
-      setNetBalance(income - expense);
+      if (balanceData) {
+        setNetBalance(balanceData.net_balance);
+        setAllocatedBalance(balanceData.allocated_balance);
+        setAvailableBalance(balanceData.available_balance);
+      }
     } catch (error: any) {
-      console.error('Error calculating net balance:', error);
+      console.error('Error fetching balances:', error);
     }
   };
 
@@ -118,6 +107,7 @@ const GoalsScreen: React.FC = () => {
     if (!user) return;
 
     try {
+      // Fetch all goals with allocated amounts
       const { data: goalsData, error } = await supabase
         .from('saving_goals')
         .select('*')
@@ -127,74 +117,45 @@ const GoalsScreen: React.FC = () => {
       if (error) throw error;
 
       if (goalsData) {
-        // Calculate progress for each goal
-        const goalsWithProgress = await Promise.all(
-          goalsData.map(async (goal: any) => {
-            // Get transactions since goal start date for progress
-            const { data: transactions } = await supabase
-              .from('transactions')
-              .select('type, amount')
-              .eq('user_id', user.id)
-              .gte('date', goal.start_date);
+        // Calculate progress for each goal based on allocated amounts
+        const goalsWithProgress = goalsData.map((goal: any) => {
+          const currentAmount = Number(goal.allocated_amount) || 0;
+          const targetAmount = Number(goal.target_amount);
+          const progress = Math.min((currentAmount / targetAmount) * 100, 100);
 
-            const goalIncome = transactions
-              ? transactions
-                  .filter((t) => t.type === 'income')
-                  .reduce((sum, t) => sum + Number(t.amount), 0)
-              : 0;
+          // Calculate days remaining
+          const today = new Date();
+          const targetDate = new Date(goal.target_date);
+          const daysRemaining = differenceInDays(targetDate, today);
 
-            const goalExpense = transactions
-              ? transactions
-                  .filter((t) => t.type === 'expense')
-                  .reduce((sum, t) => sum + Number(t.amount), 0)
-              : 0;
+          // Calculate monthly rate needed
+          const monthsRemaining = Math.max(
+            differenceInMonths(targetDate, today),
+            1
+          );
+          const amountRemaining = targetAmount - currentAmount;
+          const monthlyRateNeeded = Math.max(amountRemaining / monthsRemaining, 0);
 
-            const currentAmount = goalIncome - goalExpense;
-            const progress = Math.min(
-              (currentAmount / Number(goal.target_amount)) * 100,
-              100
-            );
+          // Check if on track (current progress >= expected progress)
+          const totalDays = differenceInDays(
+            targetDate,
+            new Date(goal.start_date)
+          );
+          const daysPassed = Math.max(totalDays - daysRemaining, 0);
+          const expectedProgress = totalDays > 0 ? (daysPassed / totalDays) * 100 : 0;
+          const isOnTrack = progress >= expectedProgress || progress >= 100;
 
-            // Calculate days remaining
-            const today = new Date();
-            const targetDate = new Date(goal.target_date);
-            const daysRemaining = differenceInDays(targetDate, today);
-
-            // Calculate monthly rate needed
-            const monthsRemaining = Math.max(
-              differenceInMonths(targetDate, today),
-              1
-            );
-            const amountRemaining = Number(goal.target_amount) - currentAmount;
-            const monthlyRateNeeded = amountRemaining / monthsRemaining;
-
-            // Check if on track (current progress >= expected progress)
-            const totalDays = differenceInDays(
-              targetDate,
-              new Date(goal.start_date)
-            );
-            const daysPassed = totalDays - daysRemaining;
-            const expectedProgress = (daysPassed / totalDays) * 100;
-            const isOnTrack = progress >= expectedProgress || progress >= 100;
-
-            return {
-              ...goal,
-              current_amount: currentAmount,
-              progress,
-              monthly_rate_needed: monthlyRateNeeded,
-              is_on_track: isOnTrack,
-              days_remaining: daysRemaining,
-            };
-          })
-        );
+          return {
+            ...goal,
+            current_amount: currentAmount,
+            progress,
+            monthly_rate_needed: monthlyRateNeeded,
+            is_on_track: isOnTrack,
+            days_remaining: daysRemaining,
+          };
+        });
 
         setGoals(goalsWithProgress);
-
-        // Calculate total goal commitments (only active goals)
-        const totalCommitments = goalsWithProgress
-          .filter((g) => g.status === 'active')
-          .reduce((sum, g) => sum + Number(g.target_amount), 0);
-        setTotalGoalCommitments(totalCommitments);
       }
     } catch (error: any) {
       console.error('Error fetching goals:', error);
@@ -231,8 +192,6 @@ const GoalsScreen: React.FC = () => {
     );
   }
 
-  const availableBalance = netBalance - totalGoalCommitments;
-
   return (
     <SafeAreaView style={styles.container}>
       {/* Enhanced Header with Gradient */}
@@ -265,13 +224,13 @@ const GoalsScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
 
-          {totalGoalCommitments > 0 && (
+          {allocatedBalance > 0 && (
             <View style={styles.balanceCard}>
               <View style={styles.balanceRow}>
                 <View style={styles.balanceItem}>
-                  <Text style={styles.balanceLabel}>💰 Committed</Text>
+                  <Text style={styles.balanceLabel}>💰 Allocated</Text>
                   <Text style={styles.balanceValue}>
-                    {formatCurrency(totalGoalCommitments, currency)}
+                    {formatCurrency(allocatedBalance, currency)}
                   </Text>
                 </View>
                 <View style={styles.balanceDivider} />

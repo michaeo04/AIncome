@@ -1,6 +1,6 @@
 // Chat Interface - Main chat UI with messages and input
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import {
   View,
   Text,
@@ -37,7 +37,7 @@ interface ChatInterfaceProps {
   onCreateCategory?: (suggestedName: string, type: 'income' | 'expense') => void;
 }
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved, onEditTransaction, onCreateCategory }) => {
+const ChatInterface = forwardRef<any, ChatInterfaceProps>(({ onTransactionSaved, onEditTransaction, onCreateCategory }, ref) => {
   const { user } = useAuthStore();
   const {
     messages,
@@ -65,6 +65,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved, onEdi
     deficit: 0,
   });
   const [pendingTransaction, setPendingTransaction] = useState<any>(null);
+
+  // Expose method to parent component via ref
+  useImperativeHandle(ref, () => ({
+    markTransactionAsSaved: (transaction: any) => {
+      // Mark the transaction card as saved using its messageId
+      if (transaction.messageId) {
+        setSavedMessageIds(prev => new Set(prev).add(transaction.messageId));
+      }
+    },
+  }));
 
   // Fetch categories, currency, and personalization on mount
   useEffect(() => {
@@ -357,10 +367,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved, onEdi
     }
   };
 
-  const handleEditTransaction = (transaction: any) => {
+  const handleEditTransaction = (transaction: any, messageId?: string) => {
     if (onEditTransaction) {
+      // Add messageId to transaction for tracking
+      const transactionWithId = { ...transaction, messageId };
       // Call parent callback to switch to form tab and pre-fill
-      onEditTransaction(transaction);
+      onEditTransaction(transactionWithId);
     } else {
       // Fallback message if callback not provided
       addAssistantMessage(
@@ -586,7 +598,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved, onEdi
               key={`${message.id}-transaction-${index}`}
               transaction={transaction}
               currency={currency}
-              onEdit={() => handleEditTransaction(transaction)}
+              onEdit={() => handleEditTransaction(transaction, `${message.id}-${index}`)}
               onCancel={() => handleCancelSingleTransaction(message.id, index)}
               onConfirm={() => handleConfirmSingleTransaction(transaction, message.id, index)}
               isLoading={isSaving}
@@ -618,7 +630,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onTransactionSaved, onEdi
           <TransactionConfirmationCard
             transaction={message.parsedTransaction}
             currency={currency}
-            onEdit={() => handleEditTransaction(message.parsedTransaction)}
+            onEdit={() => handleEditTransaction(message.parsedTransaction, message.id)}
             onCancel={handleCancelTransaction}
             onConfirm={() => handleConfirmTransaction(message.parsedTransaction, message.id)}
             isLoading={isSaving}
@@ -978,5 +990,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+
+ChatInterface.displayName = 'ChatInterface';
 
 export default ChatInterface;
