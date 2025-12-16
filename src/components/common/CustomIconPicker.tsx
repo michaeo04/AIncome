@@ -11,7 +11,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
+// Use legacy API to keep readAsStringAsync support on Expo SDK 54
+import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
 import { supabase } from '../../services/supabase';
 import { useAuthStore } from '../../stores/authStore';
@@ -50,7 +51,7 @@ const CustomIconPicker: React.FC<CustomIconPickerProps> = ({
 
       // Launch image picker
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1], // Square crop
         quality: 0.7, // Compress to reduce file size
@@ -81,7 +82,8 @@ const CustomIconPicker: React.FC<CustomIconPickerProps> = ({
 
       // Read file as base64 using expo-file-system
       const base64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
+        // Using literal string for compatibility across Expo versions
+        encoding: 'base64',
       });
 
       // Convert base64 to ArrayBuffer for Supabase
@@ -97,6 +99,19 @@ const CustomIconPicker: React.FC<CustomIconPickerProps> = ({
         });
 
       if (error) {
+        const bucketMissing =
+          error.name === 'StorageApiError' &&
+          typeof error.message === 'string' &&
+          error.message.toLowerCase().includes('bucket not found');
+
+        if (bucketMissing) {
+          Alert.alert(
+            'Icons bucket missing',
+            'Storage bucket "icons" is not found. Please create a public bucket named "icons" in Supabase Storage or run migration 009_add_custom_icons.sql, then try again.'
+          );
+          return;
+        }
+
         throw error;
       }
 

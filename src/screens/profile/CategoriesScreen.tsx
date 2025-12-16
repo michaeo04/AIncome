@@ -20,6 +20,7 @@ import { supabase } from '../../services/supabase';
 import { useAuthStore } from '../../stores/authStore';
 import { Category } from '../../types';
 import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZE, FONT_WEIGHT, SHADOWS } from '../../theme/modernTheme';
+import CategoryIcon from '../../components/common/CategoryIcon';
 
 type CategoriesScreenNavigationProp = StackNavigationProp<
   ProfileStackParamList,
@@ -253,7 +254,11 @@ const CategoriesScreen: React.FC = () => {
                     colors={[category.color + '40', category.color + '60']}
                     style={styles.categoryIcon}
                   >
-                    <Text style={styles.categoryIconText}>{category.icon}</Text>
+                    <CategoryIcon
+                      icon={category.icon}
+                      iconUrl={category.icon_url}
+                      size={48}
+                    />
                   </LinearGradient>
                   <View style={styles.categoryInfo}>
                     <Text style={styles.categoryName}>{category.name}</Text>

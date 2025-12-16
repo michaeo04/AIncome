@@ -1,5 +1,5 @@
 // Authentication Service - Supabase Auth Operations
-
+import * as Linking from 'expo-linking';
 import { supabase } from './supabase';
 
 export interface SignUpData {
@@ -97,8 +97,9 @@ export const signOut = async () => {
  */
 export const resetPassword = async (email: string) => {
   try {
+    const redirectTo = Linking.createURL('reset-password');
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: 'aincome://reset-password',
+      redirectTo,
     });
 
     if (error) throw error;

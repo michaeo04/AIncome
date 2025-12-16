@@ -16,8 +16,8 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { AuthStackParamList } from '../../navigation/types';
-import { supabase } from '../../services/supabase';
-import { isValidEmail } from '../../utils/validation';
+import { resetPassword } from '../../services/authService';
+import { isValidEmail } from '../../utils/helpers';
 
 type ForgotPasswordScreenNavigationProp = StackNavigationProp<
   AuthStackParamList,
@@ -37,7 +37,7 @@ const ForgotPasswordScreen: React.FC = () => {
 
     if (!email.trim()) {
       newErrors.email = 'Email is required';
-    } else if (!isValidEmail(email)) {
+    } else if (!isValidEmail(email.trim())) {
       newErrors.email = 'Please enter a valid email address';
     }
 
@@ -49,18 +49,22 @@ const ForgotPasswordScreen: React.FC = () => {
     if (!validateForm()) return;
 
     setIsLoading(true);
+    console.log('🔐 Attempting to send password reset email to:', email.trim());
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: 'aincome://reset-password', // Deep link for mobile app
-      });
+      const { error } = await resetPassword(email.trim());
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error from Supabase:', error);
+        throw new Error(error);
+      }
 
+      console.log('✅ Password reset email sent successfully');
       setEmailSent(true);
+
       Alert.alert(
         'Email Sent!',
-        'We have sent a password reset link to your email. Please check your inbox and follow the instructions.',
+        `We have sent a password reset link to ${email.trim()}. Please check your inbox and follow the instructions.`,
         [
           {
             text: 'OK',
@@ -69,11 +73,22 @@ const ForgotPasswordScreen: React.FC = () => {
         ]
       );
     } catch (error: any) {
-      console.error('Error sending reset email:', error);
-      Alert.alert(
-        'Error',
-        error.message || 'Failed to send password reset email. Please try again.'
-      );
+      console.error('❌ Error sending reset email:', error);
+
+      // Provide more specific error messages
+      let errorMessage = 'Failed to send password reset email. Please try again.';
+
+      if (error.message) {
+        if (error.message.includes('User not found') || error.message.includes('not found')) {
+          errorMessage = 'No account found with this email address. Please check your email or sign up.';
+        } else if (error.message.includes('rate limit')) {
+          errorMessage = 'Too many requests. Please wait a few minutes and try again.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
+      Alert.alert('Error', errorMessage);
     } finally {
       setIsLoading(false);
     }

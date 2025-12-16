@@ -19,6 +19,7 @@ import { BudgetStackParamList } from '../../navigation/types';
 import { supabase } from '../../services/supabase';
 import { useAuthStore } from '../../stores/authStore';
 import { formatCurrency } from '../../utils/helpers';
+import CategoryIcon from '../../components/common/CategoryIcon';
 
 type AddBudgetScreenNavigationProp = StackNavigationProp<
   BudgetStackParamList,
@@ -30,6 +31,7 @@ interface Category {
   id: string;
   name: string;
   icon: string;
+  icon_url?: string;
   color: string;
 }
 
@@ -283,14 +285,12 @@ const AddBudgetScreen: React.FC = () => {
                 ]}
                 onPress={() => setSelectedCategory(category.id)}
               >
-                <View
-                  style={[
-                    styles.categoryIcon,
-                    { backgroundColor: category.color + '20' },
-                  ]}
-                >
-                  <Text style={styles.categoryIconText}>{category.icon}</Text>
-                </View>
+                <CategoryIcon
+                  icon={category.icon}
+                  iconUrl={category.icon_url}
+                  size={48}
+                  style={{ backgroundColor: category.color + '20' }}
+                />
                 <Text
                   style={[
                     styles.categoryName,

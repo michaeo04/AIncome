@@ -37,7 +37,8 @@ interface ChatInterfaceProps {
   onCreateCategory?: (suggestedName: string, type: 'income' | 'expense') => void;
 }
 
-const ChatInterface = forwardRef<any, ChatInterfaceProps>(({ onTransactionSaved, onEditTransaction, onCreateCategory }, ref) => {
+const ChatInterface = forwardRef<any, ChatInterfaceProps>((props, ref) => {
+  const { onTransactionSaved, onEditTransaction, onCreateCategory } = props;
   const { user } = useAuthStore();
   const {
     messages,
@@ -828,7 +829,7 @@ const ChatInterface = forwardRef<any, ChatInterfaceProps>(({ onTransactionSaved,
       />
     </KeyboardAvoidingView>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

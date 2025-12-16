@@ -108,24 +108,50 @@ const CategoryFormScreen: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const categoryData = {
+      const baseCategoryData = {
         user_id: user.id,
         name: name.trim(),
         type,
         icon: selectedIcon,
-        icon_url: selectedIconUrl || null,
         color: selectedColor,
         is_default: false,
       };
 
-      if (isEditMode) {
-        const { error } = await supabase
-          .from('categories')
-          .update(categoryData)
-          .eq('id', categoryId)
-          .eq('user_id', user.id);
+      const withIconUrl = {
+        ...baseCategoryData,
+        icon_url: selectedIconUrl || null,
+      };
 
-        if (error) throw error;
+      const handleDbError = async (error: any, retryWithoutIcon: () => Promise<void>) => {
+        const isSchemaMissing =
+          error?.code === 'PGRST204' ||
+          (typeof error?.message === 'string' && error.message.includes('icon_url'));
+        if (isSchemaMissing) {
+          // Retry without icon_url if column missing in current schema
+          await retryWithoutIcon();
+          return true;
+        }
+        throw error;
+      };
+
+      if (isEditMode) {
+        const attemptUpdate = async (dataToUse: any) => {
+          const { error } = await supabase
+            .from('categories')
+            .update(dataToUse)
+            .eq('id', categoryId)
+            .eq('user_id', user.id);
+
+          if (error) throw error;
+        };
+
+        try {
+          await attemptUpdate(withIconUrl);
+        } catch (error: any) {
+          const handled = await handleDbError(error, async () => attemptUpdate(baseCategoryData));
+          if (!handled) throw error;
+        }
+
         Alert.alert('Success', 'Category updated successfully');
       } else {
         // Check for duplicate name
@@ -148,9 +174,17 @@ const CategoryFormScreen: React.FC = () => {
           return;
         }
 
-        const { error } = await supabase.from('categories').insert([categoryData]);
+        const attemptInsert = async (dataToUse: any) => {
+          const { error } = await supabase.from('categories').insert([dataToUse]);
+          if (error) throw error;
+        };
 
-        if (error) throw error;
+        try {
+          await attemptInsert(withIconUrl);
+        } catch (error: any) {
+          const handled = await handleDbError(error, async () => attemptInsert(baseCategoryData));
+          if (!handled) throw error;
+        }
         Alert.alert('Success', 'Category created successfully');
       }
 

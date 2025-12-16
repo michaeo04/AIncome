@@ -8,6 +8,50 @@ import {
   GoalProgressView,
 } from '../types';
 
+const isMissingFunctionError = (error: any) =>
+  error?.code === '42883' ||
+  (typeof error?.message === 'string' && error.message.includes('does not exist'));
+
+// Fallback: compute balances directly when RPC functions are missing on Supabase
+const getBalanceFallback = async (userId: string): Promise<AvailableBalance> => {
+  // Fetch transactions and sum client-side to avoid PostgREST aggregate quirks
+  const { data: txData, error: txError } = await supabase
+    .from('transactions')
+    .select('amount,type')
+    .eq('user_id', userId);
+
+  if (txError) throw txError;
+
+  let income = 0;
+  let expenses = 0;
+  (txData || []).forEach((tx) => {
+    const amt = Number(tx.amount) || 0;
+    if (tx.type === 'income') income += amt;
+    if (tx.type === 'expense') expenses += amt;
+  });
+  const net = income - expenses;
+
+  // Sum allocated across active goals client-side
+  const { data: goalsData, error: goalsError } = await supabase
+    .from('saving_goals')
+    .select('allocated_amount,status')
+    .eq('user_id', userId)
+    .eq('status', 'active');
+
+  if (goalsError) throw goalsError;
+
+  const allocated = (goalsData || []).reduce(
+    (acc, g) => acc + (Number(g.allocated_amount) || 0),
+    0
+  );
+
+  return {
+    net_balance: net,
+    allocated_balance: allocated,
+    available_balance: net - allocated,
+  };
+};
+
 /**
  * Get user's balance breakdown
  * - Net Balance: Total income - expense
@@ -22,7 +66,11 @@ export const getAvailableBalance = async (
       p_user_id: userId,
     });
 
-    if (error) throw error;
+    if (error) {
+      // If RPC missing/broken, fall back to client-side calculation
+      const fallback = await getBalanceFallback(userId);
+      return fallback;
+    }
 
     if (data && data.length > 0) {
       return {
@@ -32,7 +80,9 @@ export const getAvailableBalance = async (
       };
     }
 
-    return null;
+    // If RPC returns nothing, still try fallback
+    const fallback = await getBalanceFallback(userId);
+    return fallback;
   } catch (error) {
     console.error('Error getting available balance:', error);
     throw error;
@@ -131,7 +181,59 @@ export const allocateToGoal = async (
       p_note: note || null,
     });
 
-    if (error) throw error;
+    if (error) {
+      // Fallback path if backend function was removed
+      if (isMissingFunctionError(error)) {
+        // Recompute available balance and ensure enough funds
+        const balance = await getBalanceFallback(userId);
+        if (amount > balance.available_balance) {
+          return { success: false, error: 'Insufficient available balance' };
+        }
+
+        // Fetch current goal allocation
+        const { data: goal, error: goalError } = await supabase
+          .from('saving_goals')
+          .select('allocated_amount')
+          .eq('id', goalId)
+          .eq('user_id', userId)
+          .single();
+
+        if (goalError) throw goalError;
+
+        const newAllocated = Number(goal?.allocated_amount ?? 0) + amount;
+
+        // Insert allocation record
+        const { data: allocation, error: insertError } = await supabase
+          .from('goal_allocations')
+          .insert({
+            user_id: userId,
+            goal_id: goalId,
+            amount,
+            type: 'deposit',
+            note: note || null,
+          })
+          .select('id')
+          .single();
+
+        if (insertError) throw insertError;
+
+        // Update goal allocated_amount
+        const { error: updateError } = await supabase
+          .from('saving_goals')
+          .update({
+            allocated_amount: newAllocated,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', goalId)
+          .eq('user_id', userId);
+
+        if (updateError) throw updateError;
+
+        return { success: true, allocation_id: allocation?.id };
+      }
+
+      throw error;
+    }
 
     return data;
   } catch (error: any) {
@@ -160,7 +262,58 @@ export const withdrawFromGoal = async (
       p_note: note || null,
     });
 
-    if (error) throw error;
+    if (error) {
+      // Fallback when backend function is missing
+      if (isMissingFunctionError(error)) {
+        // Fetch current goal allocation
+        const { data: goal, error: goalError } = await supabase
+          .from('saving_goals')
+          .select('allocated_amount')
+          .eq('id', goalId)
+          .eq('user_id', userId)
+          .single();
+
+        if (goalError) throw goalError;
+
+        const currentAllocated = Number(goal?.allocated_amount ?? 0);
+        if (amount > currentAllocated) {
+          return { success: false, error: 'Insufficient allocated amount' };
+        }
+
+        // Insert allocation record
+        const { data: allocation, error: insertError } = await supabase
+          .from('goal_allocations')
+          .insert({
+            user_id: userId,
+            goal_id: goalId,
+            amount,
+            type: 'withdrawal',
+            note: note || null,
+          })
+          .select('id')
+          .single();
+
+        if (insertError) throw insertError;
+
+        const newAllocated = currentAllocated - amount;
+
+        // Update goal allocated_amount
+        const { error: updateError } = await supabase
+          .from('saving_goals')
+          .update({
+            allocated_amount: newAllocated,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', goalId)
+          .eq('user_id', userId);
+
+        if (updateError) throw updateError;
+
+        return { success: true, allocation_id: allocation?.id };
+      }
+
+      throw error;
+    }
 
     return data;
   } catch (error: any) {

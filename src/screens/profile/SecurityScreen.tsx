@@ -10,11 +10,11 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
-  Linking,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../../stores/authStore';
 import { supabase } from '../../services/supabase';
+import { resetPassword } from '../../services/authService';
 
 const SecurityScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -111,7 +111,7 @@ const SecurityScreen: React.FC = () => {
           text: 'Send',
           onPress: async () => {
             try {
-              const { error } = await supabase.auth.resetPasswordForEmail(user.email);
+              const { error } = await resetPassword(user.email);
               if (error) throw error;
 
               Alert.alert(

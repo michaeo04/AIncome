@@ -24,6 +24,7 @@ import { useThemeStore } from '../../stores/themeStore';
 import { useThemedStyles } from '../../hooks/useThemedStyles';
 import { useChatStore } from '../../stores/chatStore';
 import { Category } from '../../types';
+import CategoryIcon from '../../components/common/CategoryIcon';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { refreshMyAnalytics } from '../../services/financialAnalyticsService';
 import { checkSpendingWarning } from '../../services/goalAllocationService';
@@ -975,7 +976,7 @@ const AddTransactionScreen: React.FC = () => {
                   ]}
                   onPress={() => setSelectedCategory(category.id)}
                 >
-                  <Text style={styles.categoryIcon}>{category.icon}</Text>
+                  <CategoryIcon icon={category.icon} iconUrl={category.icon_url} size={40} />
                   <Text style={styles.categoryName} numberOfLines={1}>
                     {category.name}
                   </Text>

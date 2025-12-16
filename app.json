@@ -6,6 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/logo.png",
     "userInterfaceStyle": "light",
+    "scheme": "aincome",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/logo.png",

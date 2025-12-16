@@ -21,6 +21,7 @@ export type AuthStackParamList = {
   Login: undefined;
   Signup: undefined;
   ForgotPassword: undefined;
+  ResetPassword: undefined;
 };
 
 // Main Tab Navigator

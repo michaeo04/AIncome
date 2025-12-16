@@ -8,6 +8,7 @@ interface AuthState {
   user: User | null;
   isLoading: boolean;
   hasCompletedOnboarding: boolean;
+  isPasswordRecovery: boolean;
   setUser: (user: User | null) => void;
   setLoading: (isLoading: boolean) => void;
   setOnboardingCompleted: (completed: boolean) => Promise<void>;
@@ -15,12 +16,14 @@ interface AuthState {
   signOut: () => Promise<void>;
   initialize: () => Promise<void>;
   checkOnboardingStatus: (userId: string) => Promise<boolean>;
+  setPasswordRecovery: (isRecovering: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isLoading: true,
   hasCompletedOnboarding: false,
+  isPasswordRecovery: false,
 
   setUser: (user) => set({ user }),
 
@@ -47,6 +50,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       console.error('Error setting onboarding completed:', error);
     }
   },
+
+  setPasswordRecovery: (isRecovering: boolean) => set({ isPasswordRecovery: isRecovering }),
 
   refreshUserData: async () => {
     try {
@@ -172,7 +177,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signOut: async () => {
     try {
       await supabase.auth.signOut();
-      set({ user: null, hasCompletedOnboarding: false });
+      set({ user: null, hasCompletedOnboarding: false, isPasswordRecovery: false });
     } catch (error) {
       console.error('Error signing out:', error);
     }
@@ -192,7 +197,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           .single();
 
         if (profileError || !profile) {
-          set({ user: null, isLoading: false });
+          set({ user: null, isLoading: false, isPasswordRecovery: false });
           return;
         }
 
@@ -202,15 +207,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({
           user: profile as User,
           hasCompletedOnboarding: hasCompleted,
+          isPasswordRecovery: false,
           isLoading: false,
         });
       } else {
-        set({ user: null, hasCompletedOnboarding: false, isLoading: false });
+        set({
+          user: null,
+          hasCompletedOnboarding: false,
+          isPasswordRecovery: false,
+          isLoading: false,
+        });
       }
 
       // Listen for auth changes
       supabase.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
+        if ((event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY') && session?.user) {
+          const shouldStayInRecovery = get().isPasswordRecovery || event === 'PASSWORD_RECOVERY';
           const { data: profile } = await supabase
             .from('profiles')
             .select('*')
@@ -224,10 +236,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             set({
               user: profile as User,
               hasCompletedOnboarding: hasCompleted,
+              isPasswordRecovery: shouldStayInRecovery,
             });
           }
         } else if (event === 'SIGNED_OUT') {
-          set({ user: null, hasCompletedOnboarding: false });
+          set({ user: null, hasCompletedOnboarding: false, isPasswordRecovery: false });
         }
       });
     } catch (error) {
