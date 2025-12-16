@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   Platform,
   SafeAreaView,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute, RouteProp, CommonActions, useFocusEffect } from '@react-navigation/native';
@@ -841,11 +842,16 @@ const AddTransactionScreen: React.FC = () => {
 
       {/* Content - Form or Chat */}
       {activeTab === 'form' ? (
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
         >
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
 
         {/* Type Toggle with Gradients */}
         <View style={styles.typeToggle}>
@@ -1005,13 +1011,20 @@ const AddTransactionScreen: React.FC = () => {
             textAlignVertical="top"
           />
         </View>
-        </ScrollView>
+          </ScrollView>
+        </KeyboardAvoidingView>
       ) : (
-        <ChatInterface
-          onTransactionSaved={handleTransactionSaved}
-          onEditTransaction={handleEditFromChat}
-          onCreateCategory={handleCreateCategory}
-        />
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        >
+          <ChatInterface
+            onTransactionSaved={handleTransactionSaved}
+            onEditTransaction={handleEditFromChat}
+            onCreateCategory={handleCreateCategory}
+          />
+        </KeyboardAvoidingView>
       )}
 
       {/* Spending Warning Modal */}

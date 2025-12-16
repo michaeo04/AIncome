@@ -15,8 +15,9 @@ export interface SignInData {
 
 /**
  * Sign up a new user
- * NOTE: Email confirmation is disabled in Supabase settings for better mobile UX
- * If you enable email confirmation, configure redirect URL properly in Supabase dashboard
+ * NOTE: Email confirmation is ENABLED in Supabase settings
+ * Users will receive a confirmation email and must verify before logging in
+ * Email confirmation happens in browser, then users manually open app to login
  */
 export const signUp = async ({ email, password, name }: SignUpData) => {
   try {
@@ -27,8 +28,8 @@ export const signUp = async ({ email, password, name }: SignUpData) => {
         data: {
           name,
         },
-        // Don't require email confirmation for mobile app
-        // Configure this in Supabase Dashboard > Authentication > Settings
+        // Email confirmation via browser (user clicks link, confirms, then manually opens app)
+        // For deep linking setup, see: https://supabase.com/docs/guides/auth/redirect-urls
         emailRedirectTo: undefined,
       },
     });
@@ -146,5 +147,23 @@ export const getCurrentUser = async () => {
     return { user, error: null };
   } catch (error: any) {
     return { user: null, error: error.message };
+  }
+};
+
+/**
+ * Resend confirmation email
+ * Useful when users don't receive the initial confirmation email
+ */
+export const resendConfirmationEmail = async (email: string) => {
+  try {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email,
+    });
+
+    if (error) throw error;
+    return { error: null };
+  } catch (error: any) {
+    return { error: error.message || 'Failed to resend confirmation email' };
   }
 };

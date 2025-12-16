@@ -10,6 +10,8 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -183,7 +185,12 @@ const InitialSetupScreen: React.FC = () => {
   if (currentStep === 'currency') {
     return (
       <View style={styles.container}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        >
+          <ScrollView contentContainerStyle={styles.scrollContent}>
           {renderProgressBar()}
           <View style={styles.header}>
             <Text style={styles.stepTitle}>Select Your Currency</Text>
@@ -215,13 +222,14 @@ const InitialSetupScreen: React.FC = () => {
               </TouchableOpacity>
             ))}
           </View>
-        </ScrollView>
+          </ScrollView>
 
-        <View style={styles.footer}>
-          <TouchableOpacity style={styles.nextButton} onPress={handleCurrencyNext}>
-            <Text style={styles.nextButtonText}>Next</Text>
-          </TouchableOpacity>
-        </View>
+          <View style={styles.footer}>
+            <TouchableOpacity style={styles.nextButton} onPress={handleCurrencyNext}>
+              <Text style={styles.nextButtonText}>Next</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
       </View>
     );
   }
@@ -229,7 +237,12 @@ const InitialSetupScreen: React.FC = () => {
   if (currentStep === 'categories') {
     return (
       <View style={styles.container}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        >
+          <ScrollView contentContainerStyle={styles.scrollContent}>
           {renderProgressBar()}
           <View style={styles.header}>
             <Text style={styles.stepTitle}>Select Categories</Text>
@@ -293,19 +306,20 @@ const InitialSetupScreen: React.FC = () => {
               </>
             )}
           </View>
-        </ScrollView>
+          </ScrollView>
 
-        <View style={styles.footer}>
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-            <Text style={styles.backButtonText}>Back</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.nextButton, styles.nextButtonFlex]}
-            onPress={handleCategoriesNext}
-          >
-            <Text style={styles.nextButtonText}>Next</Text>
-          </TouchableOpacity>
-        </View>
+          <View style={styles.footer}>
+            <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+              <Text style={styles.backButtonText}>Back</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.nextButton, styles.nextButtonFlex]}
+              onPress={handleCategoriesNext}
+            >
+              <Text style={styles.nextButtonText}>Next</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
       </View>
     );
   }
@@ -313,7 +327,12 @@ const InitialSetupScreen: React.FC = () => {
   if (currentStep === 'balance') {
     return (
       <View style={styles.container}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        >
+          <ScrollView contentContainerStyle={styles.scrollContent}>
           {renderProgressBar()}
           <View style={styles.header}>
             <Text style={styles.stepTitle}>Initial Balance (Optional)</Text>
@@ -341,31 +360,32 @@ const InitialSetupScreen: React.FC = () => {
               This will be recorded as your opening balance
             </Text>
           </View>
-        </ScrollView>
+          </ScrollView>
 
-        <View style={styles.footer}>
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-            <Text style={styles.backButtonText}>Back</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.skipButton}
-            onPress={handleSkipBalance}
-            disabled={isLoading}
-          >
-            <Text style={styles.skipButtonText}>Skip</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.nextButton, styles.nextButtonFlex]}
-            onPress={handleBalanceNext}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.nextButtonText}>Finish</Text>
-            )}
-          </TouchableOpacity>
-        </View>
+          <View style={styles.footer}>
+            <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+              <Text style={styles.backButtonText}>Back</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.skipButton}
+              onPress={handleSkipBalance}
+              disabled={isLoading}
+            >
+              <Text style={styles.skipButtonText}>Skip</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.nextButton, styles.nextButtonFlex]}
+              onPress={handleBalanceNext}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.nextButtonText}>Finish</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
       </View>
     );
   }

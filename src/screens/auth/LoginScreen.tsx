@@ -17,7 +17,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { AuthStackParamList } from '../../navigation/types';
-import { signIn } from '../../services/authService';
+import { signIn, resendConfirmationEmail } from '../../services/authService';
 import { useAuthStore } from '../../stores/authStore';
 import { isValidEmail } from '../../utils/helpers';
 
@@ -51,6 +51,26 @@ const LoginScreen: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  const handleResendConfirmation = async () => {
+    if (!email.trim() || !isValidEmail(email)) {
+      Alert.alert('Invalid Email', 'Please enter a valid email address first.');
+      return;
+    }
+
+    setIsLoading(true);
+    const { error } = await resendConfirmationEmail(email.trim());
+    setIsLoading(false);
+
+    if (error) {
+      Alert.alert('Failed to Resend', error);
+    } else {
+      Alert.alert(
+        'Email Sent!',
+        'A new confirmation email has been sent. Please check your inbox and click the confirmation link.'
+      );
+    }
+  };
+
   const handleLogin = async () => {
     if (!validateForm()) return;
 
@@ -59,7 +79,26 @@ const LoginScreen: React.FC = () => {
 
     if (error) {
       setIsLoading(false);
-      Alert.alert('Login Failed', error);
+
+      // Check if error is due to unconfirmed email
+      if (error.toLowerCase().includes('email not confirmed')) {
+        Alert.alert(
+          'Email Not Confirmed',
+          error,
+          [
+            {
+              text: 'Resend Confirmation',
+              onPress: handleResendConfirmation,
+            },
+            {
+              text: 'OK',
+              style: 'cancel',
+            },
+          ]
+        );
+      } else {
+        Alert.alert('Login Failed', error);
+      }
       return;
     }
 

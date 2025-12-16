@@ -22,15 +22,15 @@
 
 DO $$
 BEGIN
-  RAISE NOTICE '';
-  RAISE NOTICE '╔══════════════════════════════════════════════╗';
-  RAISE NOTICE '║  SCHEMA CLEANUP & OPTIMIZATION               ║';
-  RAISE NOTICE '║  Migration 015                               ║';
-  RAISE NOTICE '╚══════════════════════════════════════════════╝';
-  RAISE NOTICE '';
-  RAISE NOTICE 'Starting cleanup process...';
-  RAISE NOTICE 'This will remove unused elements and optimize the schema.';
-  RAISE NOTICE '';
+RAISE NOTICE '';
+RAISE NOTICE '╔══════════════════════════════════════════════╗';
+RAISE NOTICE '║  SCHEMA CLEANUP & OPTIMIZATION               ║';
+RAISE NOTICE '║  Migration 015                               ║';
+RAISE NOTICE '╚══════════════════════════════════════════════╝';
+RAISE NOTICE '';
+RAISE NOTICE 'Starting cleanup process...';
+RAISE NOTICE 'This will remove unused elements and optimize the schema.';
+RAISE NOTICE '';
 END $$;
 
 
@@ -42,7 +42,7 @@ END $$;
 
 DO $$
 BEGIN
-  RAISE NOTICE 'Dropping unused database functions...';
+RAISE NOTICE 'Dropping unused database functions...';
 END $$;
 
 -- Old goal progress function (replaced by goal_progress_view)
@@ -70,7 +70,7 @@ DROP FUNCTION IF EXISTS public.trigger_update_financial_metrics() CASCADE;
 
 DO $$
 BEGIN
-  RAISE NOTICE '✓ Dropped 5 unused functions';
+RAISE NOTICE '✓ Dropped 5 unused functions';
 END $$;
 
 
@@ -80,21 +80,21 @@ END $$;
 
 DO $$
 BEGIN
-  RAISE NOTICE 'Removing unused columns from profiles table...';
+RAISE NOTICE 'Removing unused columns from profiles table...';
 END $$;
 
 -- These columns were defined in migrations but never queried by frontend
 ALTER TABLE public.profiles
-  DROP COLUMN IF EXISTS date_format,
-  DROP COLUMN IF EXISTS week_start,
-  DROP COLUMN IF EXISTS month_start;
+DROP COLUMN IF EXISTS date_format,
+DROP COLUMN IF EXISTS week_start,
+DROP COLUMN IF EXISTS month_start;
 
 -- Note: Keeping full_name even though there's also 'name' because some code uses full_name
 -- Note: Keeping both language fields for now - may be used in future i18n
 
 DO $$
 BEGIN
-  RAISE NOTICE '✓ Removed 3 unused columns from profiles';
+RAISE NOTICE '✓ Removed 3 unused columns from profiles';
 END $$;
 
 
@@ -105,36 +105,36 @@ END $$;
 
 DO $$
 BEGIN
-  RAISE NOTICE 'Checking budgets table column names...';
+RAISE NOTICE 'Checking budgets table column names...';
 END $$;
 
 -- Check if this is actually an issue (migrations may have already fixed it)
 DO $$
 DECLARE
-  v_has_amount BOOLEAN;
-  v_has_limit_amount BOOLEAN;
+v_has_amount BOOLEAN;
+v_has_limit_amount BOOLEAN;
 BEGIN
-  SELECT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'budgets' AND column_name = 'amount'
-  ) INTO v_has_amount;
+SELECT EXISTS (
+  SELECT 1 FROM information_schema.columns
+  WHERE table_name = 'budgets' AND column_name = 'amount'
+) INTO v_has_amount;
 
-  SELECT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_name = 'budgets' AND column_name = 'limit_amount'
-  ) INTO v_has_limit_amount;
+SELECT EXISTS (
+  SELECT 1 FROM information_schema.columns
+  WHERE table_name = 'budgets' AND column_name = 'limit_amount'
+) INTO v_has_limit_amount;
 
-  IF v_has_amount AND NOT v_has_limit_amount THEN
-    RAISE NOTICE 'Budget column is "amount" (correct) - no fix needed';
-  ELSIF v_has_limit_amount AND NOT v_has_amount THEN
-    RAISE NOTICE 'Budget column is "limit_amount" (needs rename to "amount")';
-    -- Would need to rename column here, but this would break existing code
-    -- Better to update function references instead
-  ELSIF v_has_amount AND v_has_limit_amount THEN
-    RAISE WARNING 'Both amount and limit_amount exist - needs manual cleanup';
-  ELSE
-    RAISE WARNING 'Neither column found - budgets table may be corrupted';
-  END IF;
+IF v_has_amount AND NOT v_has_limit_amount THEN
+  RAISE NOTICE 'Budget column is "amount" (correct) - no fix needed';
+ELSIF v_has_limit_amount AND NOT v_has_amount THEN
+  RAISE NOTICE 'Budget column is "limit_amount" (needs rename to "amount")';
+  -- Would need to rename column here, but this would break existing code
+  -- Better to update function references instead
+ELSIF v_has_amount AND v_has_limit_amount THEN
+  RAISE WARNING 'Both amount and limit_amount exist - needs manual cleanup';
+ELSE
+  RAISE WARNING 'Neither column found - budgets table may be corrupted';
+END IF;
 END $$;
 
 -- Note: If functions reference wrong column name, they need individual updates
@@ -147,7 +147,7 @@ END $$;
 
 DO $$
 BEGIN
-  RAISE NOTICE 'Dropping unused views...';
+RAISE NOTICE 'Dropping unused views...';
 END $$;
 
 -- user_balance view - not queried by frontend, calculations done in RPC functions
@@ -161,7 +161,7 @@ DROP VIEW IF EXISTS public.v_spending_patterns CASCADE;
 
 DO $$
 BEGIN
-  RAISE NOTICE '✓ Dropped 2 unused views';
+RAISE NOTICE '✓ Dropped 2 unused views';
 END $$;
 
 
@@ -171,7 +171,7 @@ END $$;
 
 DO $$
 BEGIN
-  RAISE NOTICE 'Removing duplicate indexes...';
+RAISE NOTICE 'Removing duplicate indexes...';
 END $$;
 
 -- Duplicate onboarding indexes (created by migrations 005 and 006)
@@ -181,26 +181,26 @@ DROP INDEX IF EXISTS public.profiles_onboarding_idx;
 -- Check for other duplicates
 DO $$
 DECLARE
-  v_duplicate_count INTEGER;
+v_duplicate_count INTEGER;
 BEGIN
-  -- Find indexes on same columns
-  SELECT COUNT(*) INTO v_duplicate_count
-  FROM (
-    SELECT tablename, indexname, indexdef
-    FROM pg_indexes
-    WHERE schemaname = 'public'
-  ) idx
-  GROUP BY tablename, indexdef
-  HAVING COUNT(*) > 1;
+-- Find indexes on same columns
+SELECT COUNT(*) INTO v_duplicate_count
+FROM (
+  SELECT tablename, indexname, indexdef
+  FROM pg_indexes
+  WHERE schemaname = 'public'
+) idx
+GROUP BY tablename, indexdef
+HAVING COUNT(*) > 1;
 
-  IF v_duplicate_count > 0 THEN
-    RAISE NOTICE 'Found % potential duplicate indexes (manual review recommended)', v_duplicate_count;
-  END IF;
+IF v_duplicate_count > 0 THEN
+  RAISE NOTICE 'Found % potential duplicate indexes (manual review recommended)', v_duplicate_count;
+END IF;
 END $$;
 
 DO $$
 BEGIN
-  RAISE NOTICE '✓ Removed duplicate indexes';
+RAISE NOTICE '✓ Removed duplicate indexes';
 END $$;
 
 
@@ -211,29 +211,29 @@ END $$;
 
 DO $$
 BEGIN
-  RAISE NOTICE 'Adding optimized composite indexes...';
+RAISE NOTICE 'Adding optimized composite indexes...';
 END $$;
 
 -- Transactions: Common pattern - filter by user + type + date range
 CREATE INDEX IF NOT EXISTS transactions_user_type_date_idx
-  ON public.transactions(user_id, type, date DESC);
+ON public.transactions(user_id, type, date DESC);
 
 -- Budgets: Common pattern - filter by user + period + date range
 CREATE INDEX IF NOT EXISTS budgets_user_period_dates_idx
-  ON public.budgets(user_id, period, start_date, end_date);
+ON public.budgets(user_id, period, start_date, end_date);
 
 -- Pending transactions: Improved query for user's pending items
 -- Note: pending_transactions_user_status_idx already exists from migration 014
 
 -- Financial insights: Common pattern - active insights for user
 CREATE INDEX IF NOT EXISTS financial_insights_user_active_idx
-  ON public.financial_insights(user_id, is_active, created_at DESC)
-  WHERE is_active = true;
+ON public.financial_insights(user_id, is_active, created_at DESC)
+WHERE is_active = true;
 -- This is a partial index - much faster for common query
 
 DO $$
 BEGIN
-  RAISE NOTICE '✓ Added 3 optimized indexes';
+RAISE NOTICE '✓ Added 3 optimized indexes';
 END $$;
 
 
@@ -243,39 +243,39 @@ END $$;
 
 DO $$
 BEGIN
-  RAISE NOTICE 'Adding missing constraints...';
+RAISE NOTICE 'Adding missing constraints...';
 END $$;
 
 -- Ensure budget amount is always positive
 DO $$
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'budgets_amount_positive'
-  ) THEN
-    ALTER TABLE public.budgets
-      ADD CONSTRAINT budgets_amount_positive
-      CHECK (amount > 0);
-    RAISE NOTICE '✓ Added positive amount constraint to budgets';
-  ELSE
-    RAISE NOTICE 'Budget amount constraint already exists';
-  END IF;
+IF NOT EXISTS (
+  SELECT 1 FROM information_schema.check_constraints
+  WHERE constraint_name = 'budgets_amount_positive'
+) THEN
+  ALTER TABLE public.budgets
+    ADD CONSTRAINT budgets_amount_positive
+    CHECK (amount > 0);
+  RAISE NOTICE '✓ Added positive amount constraint to budgets';
+ELSE
+  RAISE NOTICE 'Budget amount constraint already exists';
+END IF;
 END $$;
 
 -- Ensure goal target dates are realistic (within 50 years)
 DO $$
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'saving_goals_realistic_date'
-  ) THEN
-    ALTER TABLE public.saving_goals
-      ADD CONSTRAINT saving_goals_realistic_date
-      CHECK (target_date <= start_date + INTERVAL '50 years');
-    RAISE NOTICE '✓ Added realistic date constraint to saving_goals';
-  ELSE
-    RAISE NOTICE 'Goal date constraint already exists';
-  END IF;
+IF NOT EXISTS (
+  SELECT 1 FROM information_schema.check_constraints
+  WHERE constraint_name = 'saving_goals_realistic_date'
+) THEN
+  ALTER TABLE public.saving_goals
+    ADD CONSTRAINT saving_goals_realistic_date
+    CHECK (target_date <= start_date + INTERVAL '50 years');
+  RAISE NOTICE '✓ Added realistic date constraint to saving_goals';
+ELSE
+  RAISE NOTICE 'Goal date constraint already exists';
+END IF;
 END $$;
 
 
@@ -285,7 +285,7 @@ END $$;
 
 DO $$
 BEGIN
-  RAISE NOTICE 'Running VACUUM ANALYZE on modified tables...';
+RAISE NOTICE 'Running VACUUM ANALYZE on modified tables...';
 END $$;
 
 -- Analyze tables to update statistics for query planner
@@ -296,7 +296,7 @@ ANALYZE public.saving_goals;
 
 DO $$
 BEGIN
-  RAISE NOTICE '✓ Statistics updated';
+RAISE NOTICE '✓ Statistics updated';
 END $$;
 
 
@@ -306,43 +306,43 @@ END $$;
 
 DO $$
 BEGIN
-  RAISE NOTICE 'Verifying critical functions are intact...';
+RAISE NOTICE 'Verifying critical functions are intact...';
 END $$;
 
 DO $$
 DECLARE
-  v_missing_functions TEXT[] := ARRAY[]::TEXT[];
+v_missing_functions TEXT[] := ARRAY[]::TEXT[];
 BEGIN
-  -- Check all functions actually called by frontend
-  IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'get_available_balance') THEN
-    v_missing_functions := array_append(v_missing_functions, 'get_available_balance');
-  END IF;
+-- Check all functions actually called by frontend
+IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'get_available_balance') THEN
+  v_missing_functions := array_append(v_missing_functions, 'get_available_balance');
+END IF;
 
-  IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'can_allocate_to_goal') THEN
-    v_missing_functions := array_append(v_missing_functions, 'can_allocate_to_goal');
-  END IF;
+IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'can_allocate_to_goal') THEN
+  v_missing_functions := array_append(v_missing_functions, 'can_allocate_to_goal');
+END IF;
 
-  IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'allocate_to_goal') THEN
-    v_missing_functions := array_append(v_missing_functions, 'allocate_to_goal');
-  END IF;
+IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'allocate_to_goal') THEN
+  v_missing_functions := array_append(v_missing_functions, 'allocate_to_goal');
+END IF;
 
-  IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'withdraw_from_goal') THEN
-    v_missing_functions := array_append(v_missing_functions, 'withdraw_from_goal');
-  END IF;
+IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'withdraw_from_goal') THEN
+  v_missing_functions := array_append(v_missing_functions, 'withdraw_from_goal');
+END IF;
 
-  IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'update_user_analytics') THEN
-    v_missing_functions := array_append(v_missing_functions, 'update_user_analytics');
-  END IF;
+IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'update_user_analytics') THEN
+  v_missing_functions := array_append(v_missing_functions, 'update_user_analytics');
+END IF;
 
-  IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'refresh_my_analytics') THEN
-    v_missing_functions := array_append(v_missing_functions, 'refresh_my_analytics');
-  END IF;
+IF NOT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'refresh_my_analytics') THEN
+  v_missing_functions := array_append(v_missing_functions, 'refresh_my_analytics');
+END IF;
 
-  IF array_length(v_missing_functions, 1) > 0 THEN
-    RAISE EXCEPTION 'CRITICAL: Missing functions: %', array_to_string(v_missing_functions, ', ');
-  ELSE
-    RAISE NOTICE '✓ All critical functions verified';
-  END IF;
+IF array_length(v_missing_functions, 1) > 0 THEN
+  RAISE EXCEPTION 'CRITICAL: Missing functions: %', array_to_string(v_missing_functions, ', ');
+ELSE
+  RAISE NOTICE '✓ All critical functions verified';
+END IF;
 END $$;
 
 
@@ -352,50 +352,50 @@ END $$;
 
 DO $$
 BEGIN
-  RAISE NOTICE 'Verifying critical tables are intact...';
+RAISE NOTICE 'Verifying critical tables are intact...';
 END $$;
 
 DO $$
 DECLARE
-  v_missing_tables TEXT[] := ARRAY[]::TEXT[];
+v_missing_tables TEXT[] := ARRAY[]::TEXT[];
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'profiles') THEN
-    v_missing_tables := array_append(v_missing_tables, 'profiles');
-  END IF;
+IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'profiles') THEN
+  v_missing_tables := array_append(v_missing_tables, 'profiles');
+END IF;
 
-  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'transactions') THEN
-    v_missing_tables := array_append(v_missing_tables, 'transactions');
-  END IF;
+IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'transactions') THEN
+  v_missing_tables := array_append(v_missing_tables, 'transactions');
+END IF;
 
-  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'categories') THEN
-    v_missing_tables := array_append(v_missing_tables, 'categories');
-  END IF;
+IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'categories') THEN
+  v_missing_tables := array_append(v_missing_tables, 'categories');
+END IF;
 
-  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'budgets') THEN
-    v_missing_tables := array_append(v_missing_tables, 'budgets');
-  END IF;
+IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'budgets') THEN
+  v_missing_tables := array_append(v_missing_tables, 'budgets');
+END IF;
 
-  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'saving_goals') THEN
-    v_missing_tables := array_append(v_missing_tables, 'saving_goals');
-  END IF;
+IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'saving_goals') THEN
+  v_missing_tables := array_append(v_missing_tables, 'saving_goals');
+END IF;
 
-  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'goal_allocations') THEN
-    v_missing_tables := array_append(v_missing_tables, 'goal_allocations');
-  END IF;
+IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'goal_allocations') THEN
+  v_missing_tables := array_append(v_missing_tables, 'goal_allocations');
+END IF;
 
-  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'pending_transactions') THEN
-    v_missing_tables := array_append(v_missing_tables, 'pending_transactions');
-  END IF;
+IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'pending_transactions') THEN
+  v_missing_tables := array_append(v_missing_tables, 'pending_transactions');
+END IF;
 
-  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'chatbot_financial_context') THEN
-    v_missing_tables := array_append(v_missing_tables, 'chatbot_financial_context');
-  END IF;
+IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'chatbot_financial_context') THEN
+  v_missing_tables := array_append(v_missing_tables, 'chatbot_financial_context');
+END IF;
 
-  IF array_length(v_missing_tables, 1) > 0 THEN
-    RAISE EXCEPTION 'CRITICAL: Missing tables: %', array_to_string(v_missing_tables, ', ');
-  ELSE
-    RAISE NOTICE '✓ All critical tables verified';
-  END IF;
+IF array_length(v_missing_tables, 1) > 0 THEN
+  RAISE EXCEPTION 'CRITICAL: Missing tables: %', array_to_string(v_missing_tables, ', ');
+ELSE
+  RAISE NOTICE '✓ All critical tables verified';
+END IF;
 END $$;
 
 
@@ -405,44 +405,44 @@ END $$;
 
 DO $$
 DECLARE
-  v_table_count INTEGER;
-  v_function_count INTEGER;
-  v_view_count INTEGER;
-  v_index_count INTEGER;
-  v_trigger_count INTEGER;
+v_table_count INTEGER;
+v_function_count INTEGER;
+v_view_count INTEGER;
+v_index_count INTEGER;
+v_trigger_count INTEGER;
 BEGIN
-  SELECT COUNT(*) INTO v_table_count FROM information_schema.tables WHERE table_schema = 'public';
-  SELECT COUNT(*) INTO v_function_count FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid WHERE n.nspname = 'public';
-  SELECT COUNT(*) INTO v_view_count FROM information_schema.views WHERE table_schema = 'public';
-  SELECT COUNT(*) INTO v_index_count FROM pg_indexes WHERE schemaname = 'public';
-  SELECT COUNT(*) INTO v_trigger_count FROM pg_trigger WHERE tgisinternal = false;
+SELECT COUNT(*) INTO v_table_count FROM information_schema.tables WHERE table_schema = 'public';
+SELECT COUNT(*) INTO v_function_count FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid WHERE n.nspname = 'public';
+SELECT COUNT(*) INTO v_view_count FROM information_schema.views WHERE table_schema = 'public';
+SELECT COUNT(*) INTO v_index_count FROM pg_indexes WHERE schemaname = 'public';
+SELECT COUNT(*) INTO v_trigger_count FROM pg_trigger WHERE tgisinternal = false;
 
-  RAISE NOTICE '';
-  RAISE NOTICE '========================================';
-  RAISE NOTICE 'SCHEMA CLEANUP COMPLETE';
-  RAISE NOTICE '========================================';
-  RAISE NOTICE '';
-  RAISE NOTICE 'Removed:';
-  RAISE NOTICE '  • 5 unused database functions';
-  RAISE NOTICE '  • 3 unused columns (date_format, week_start, month_start)';
-  RAISE NOTICE '  • 2 unused views (user_balance, v_spending_patterns)';
-  RAISE NOTICE '  • 1+ duplicate indexes';
-  RAISE NOTICE '';
-  RAISE NOTICE 'Added:';
-  RAISE NOTICE '  • 3 optimized composite indexes';
-  RAISE NOTICE '  • 2 data validation constraints';
-  RAISE NOTICE '';
-  RAISE NOTICE 'Current schema summary:';
-  RAISE NOTICE '  • Tables: %', v_table_count;
-  RAISE NOTICE '  • Functions: %', v_function_count;
-  RAISE NOTICE '  • Views: %', v_view_count;
-  RAISE NOTICE '  • Indexes: %', v_index_count;
-  RAISE NOTICE '  • Triggers: %', v_trigger_count;
-  RAISE NOTICE '';
-  RAISE NOTICE 'Status: ✓ All critical components verified';
-  RAISE NOTICE 'Safe to deploy: YES';
-  RAISE NOTICE '';
-  RAISE NOTICE '========================================';
+RAISE NOTICE '';
+RAISE NOTICE '========================================';
+RAISE NOTICE 'SCHEMA CLEANUP COMPLETE';
+RAISE NOTICE '========================================';
+RAISE NOTICE '';
+RAISE NOTICE 'Removed:';
+RAISE NOTICE '  • 5 unused database functions';
+RAISE NOTICE '  • 3 unused columns (date_format, week_start, month_start)';
+RAISE NOTICE '  • 2 unused views (user_balance, v_spending_patterns)';
+RAISE NOTICE '  • 1+ duplicate indexes';
+RAISE NOTICE '';
+RAISE NOTICE 'Added:';
+RAISE NOTICE '  • 3 optimized composite indexes';
+RAISE NOTICE '  • 2 data validation constraints';
+RAISE NOTICE '';
+RAISE NOTICE 'Current schema summary:';
+RAISE NOTICE '  • Tables: %', v_table_count;
+RAISE NOTICE '  • Functions: %', v_function_count;
+RAISE NOTICE '  • Views: %', v_view_count;
+RAISE NOTICE '  • Indexes: %', v_index_count;
+RAISE NOTICE '  • Triggers: %', v_trigger_count;
+RAISE NOTICE '';
+RAISE NOTICE 'Status: ✓ All critical components verified';
+RAISE NOTICE 'Safe to deploy: YES';
+RAISE NOTICE '';
+RAISE NOTICE '========================================';
 END $$;
 
 

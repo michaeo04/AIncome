@@ -1,0 +1,566 @@
+// ========================================
+// AIncome - Database Schema (ERD)
+// ========================================
+// AI-Powered Personal Finance Tracker
+// Schema Version: Post-Migration 015 (Optimized)
+// Last Updated: 2025-12-13
+//
+// Visualize this at: https://dbdiagram.io/
+// Paste this entire file into dbdiagram.io to see the ERD
+
+Project AIncome {
+  database_type: 'PostgreSQL'
+  Note: '''
+    # AIncome - Personal Finance Tracker
+
+    AI-powered expense tracking with:
+    - Transaction management (income/expense)
+    - Budget tracking with alerts
+    - Saving goals with allocations
+    - Financial analytics and insights
+    - AI chatbot advisor
+    - Bank transaction notifications
+  '''
+}
+
+// ========================================
+// ENUMS
+// ========================================
+
+Enum transaction_type {
+  income
+  expense
+}
+
+Enum budget_period {
+  month
+  quarter
+  year
+}
+
+Enum goal_status {
+  active
+  completed
+  archived
+}
+
+Enum allocation_type {
+  deposit
+  withdrawal
+}
+
+Enum pending_status {
+  pending
+  confirmed
+  rejected
+}
+
+Enum insight_type {
+  spending_alert
+  savings_achievement
+  budget_warning
+  goal_progress
+  trend_positive
+  trend_negative
+  recommendation
+  milestone
+  anomaly
+}
+
+Enum insight_severity {
+  info
+  warning
+  critical
+  success
+}
+
+Enum trend_direction {
+  increasing
+  stable
+  decreasing
+  unknown
+}
+
+Enum financial_knowledge_level {
+  beginner
+  intermediate
+  advanced
+}
+
+Enum communication_style {
+  casual
+  professional
+  brief
+  detailed
+  encouraging
+}
+
+Enum age_range {
+  "18-25"
+  "26-35"
+  "36-45"
+  "46-55"
+  "56+"
+}
+
+Enum income_level {
+  student
+  entry
+  middle
+  upper_middle
+  high
+  prefer_not_say
+}
+
+Enum family_situation {
+  single
+  partnered_no_kids
+  partnered_with_kids
+  single_parent
+  living_with_parents
+  retired
+}
+
+// ========================================
+// CORE TABLES
+// ========================================
+
+Table profiles {
+  id uuid [pk, ref: > auth.users.id, note: 'References Supabase Auth user']
+  email text [not null, note: 'User email from auth']
+  name text [note: 'Display name']
+  avatar_url text [note: 'Profile picture path']
+
+  // App Settings
+  currency text [not null, default: 'VND', note: 'Preferred currency']
+  language text [not null, default: 'vi', note: 'App language']
+  theme text [not null, default: 'light', note: 'UI theme: light/dark/auto']
+
+  // Notification Settings
+  notifications_enabled boolean [not null, default: true]
+  budget_alerts boolean [not null, default: true]
+  goal_reminders boolean [not null, default: true]
+
+  // Personalization (for AI Advisor)
+  financial_goals jsonb [note: 'Array of financial objectives']
+  financial_knowledge financial_knowledge_level
+  communication_style communication_style
+  age_range age_range
+  financial_concerns jsonb [note: 'Array of primary concerns']
+  income_level income_level
+  family_situation family_situation
+
+  // Onboarding
+  has_completed_personalization boolean [not null, default: false]
+  has_completed_onboarding boolean [not null, default: false]
+
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    email [name: 'profiles_email_idx']
+    has_completed_personalization [name: 'profiles_personalization_completed_idx']
+    has_completed_onboarding [name: 'profiles_onboarding_completed_idx']
+  }
+
+  Note: 'User account settings, preferences, and personalization'
+}
+
+Table categories {
+  id uuid [pk, default: `gen_random_uuid()`]
+  user_id uuid [ref: > auth.users.id, note: 'NULL = default category']
+  name text [not null]
+  type transaction_type [not null]
+  icon text [not null, default: '💰', note: 'Emoji icon']
+  color text [not null, default: '#3B82F6', note: 'Hex color']
+  is_default boolean [not null, default: false]
+  icon_url text [note: 'Custom uploaded icon path']
+
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    user_id [name: 'categories_user_id_idx']
+    type [name: 'categories_type_idx']
+    (user_id, type) [name: 'categories_user_type_idx']
+  }
+
+  Note: 'Income/expense categories with custom icons. Default categories have user_id=NULL'
+}
+
+Table transactions {
+  id uuid [pk, default: `gen_random_uuid()`]
+  user_id uuid [not null, ref: > auth.users.id]
+  type transaction_type [not null]
+  amount decimal(15,2) [not null, note: 'Must be > 0']
+  category_id uuid [not null, ref: > categories.id]
+  note text
+  date date [not null, default: `CURRENT_DATE`]
+
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    user_id [name: 'transactions_user_id_idx']
+    (date) [name: 'transactions_date_idx', note: 'DESC']
+    category_id [name: 'transactions_category_id_idx']
+    (user_id, date) [name: 'transactions_user_date_idx', note: 'DESC on date']
+    (user_id, type) [name: 'transactions_user_type_idx']
+    (user_id, type, date) [name: 'transactions_user_type_date_idx', note: 'DESC on date, added in migration 015']
+  }
+
+  Note: 'All income and expense records. Triggers analytics update on change.'
+}
+
+Table budgets {
+  id uuid [pk, default: `gen_random_uuid()`]
+  user_id uuid [not null, ref: > auth.users.id]
+  category_id uuid [not null, ref: > categories.id]
+  amount decimal(15,2) [not null, note: 'Budget limit, must be > 0']
+  period budget_period [not null, default: 'month']
+  start_date date [not null]
+  end_date date [not null, note: 'Must be > start_date']
+  alert_threshold integer [default: 80, note: 'Alert at % (0-100)']
+  icon_url text [note: 'Custom budget icon']
+
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    user_id [name: 'budgets_user_id_idx']
+    category_id [name: 'budgets_category_id_idx']
+    (start_date, end_date) [name: 'budgets_dates_idx']
+    (user_id, period, start_date, end_date) [name: 'budgets_user_period_dates_idx', note: 'Added in migration 015']
+  }
+
+  Note: 'Budget limits by category with alert thresholds. One budget per category per period.'
+}
+
+Table saving_goals {
+  id uuid [pk, default: `gen_random_uuid()`]
+  user_id uuid [not null, ref: > auth.users.id]
+  name text [not null]
+  target_amount decimal(15,2) [not null, note: 'Must be > 0']
+  allocated_amount decimal(15,2) [not null, default: 0, note: 'Money allocated to goal']
+  start_date date [not null]
+  target_date date [not null, note: 'Must be > start_date, within 50 years']
+  icon text [default: '🎯']
+  color text [default: '#10B981']
+  note text
+  status goal_status [not null, default: 'active']
+
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    user_id [name: 'saving_goals_user_id_idx']
+    status [name: 'saving_goals_status_idx']
+    (start_date, target_date) [name: 'saving_goals_dates_idx']
+  }
+
+  Note: 'Savings targets with allocation tracking. Auto-completes when allocated >= target.'
+}
+
+Table goal_allocations {
+  id uuid [pk, default: `gen_random_uuid()`]
+  user_id uuid [not null, ref: > auth.users.id]
+  goal_id uuid [not null, ref: > saving_goals.id]
+  amount decimal(15,2) [not null, note: 'Positive for deposit, negative for withdrawal']
+  type allocation_type [not null]
+  note text
+
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    user_id [name: 'goal_allocations_user_id_idx']
+    goal_id [name: 'goal_allocations_goal_id_idx']
+    (created_at) [name: 'goal_allocations_created_at_idx', note: 'DESC']
+  }
+
+  Note: 'Track money transfers between available balance and goals. Use RPC functions for operations.'
+}
+
+Table pending_transactions {
+  id uuid [pk, default: `gen_random_uuid()`]
+  user_id uuid [not null, ref: > auth.users.id]
+
+  // Raw Bank Data
+  raw_sms_text text [not null, note: 'Original bank SMS']
+  bank_name text [note: 'e.g., BIDV, VietcomBank']
+
+  // AI-Parsed Data (editable by user)
+  parsed_type transaction_type [not null]
+  parsed_amount decimal(15,2) [not null]
+  parsed_category_id uuid [ref: > categories.id]
+  parsed_note text
+  parsed_date date [not null]
+  parsed_merchant text [note: 'Extracted merchant name']
+
+  // AI Metadata
+  confidence decimal(3,2) [note: 'AI confidence 0.0-1.0']
+
+  // Status
+  status pending_status [not null, default: 'pending']
+
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    user_id [name: 'pending_transactions_user_id_idx']
+    status [name: 'pending_transactions_status_idx']
+    (created_at) [name: 'pending_transactions_created_idx', note: 'DESC']
+    (user_id, status, created_at) [name: 'pending_transactions_user_status_idx', note: 'DESC on created_at']
+  }
+
+  Note: 'Bank transaction notifications awaiting user confirmation. Real-time subscribed.'
+}
+
+// ========================================
+// ANALYTICS TABLES
+// ========================================
+
+Table chatbot_financial_context {
+  id uuid [pk, default: `gen_random_uuid()`]
+  user_id uuid [unique, not null, ref: - auth.users.id, note: 'One record per user']
+
+  // Current Status
+  current_balance decimal(15,2) [not null, default: 0]
+  total_income_mtd decimal(15,2) [not null, default: 0, note: 'Month-to-date']
+  total_expense_mtd decimal(15,2) [not null, default: 0]
+  savings_rate_current decimal(5,2) [not null, default: 0]
+
+  // 3-Month Averages
+  avg_monthly_income decimal(15,2) [not null, default: 0]
+  avg_monthly_expense decimal(15,2) [not null, default: 0]
+  avg_savings_rate decimal(5,2) [not null, default: 0]
+
+  // Budget Status
+  budgets_exceeded integer [not null, default: 0]
+  budgets_warning integer [not null, default: 0]
+  budgets_healthy integer [not null, default: 0]
+
+  // Goal Status
+  goals_achieved integer [not null, default: 0]
+  goals_on_track integer [not null, default: 0]
+  goals_behind integer [not null, default: 0]
+
+  // Financial Health
+  financial_health_score integer [not null, default: 50, note: 'Score 0-100']
+  top_spending_categories jsonb [not null, default: '[]']
+  income_trend trend_direction
+  expense_trend trend_direction
+  emergency_fund_months decimal(4,2) [default: 0]
+
+  last_updated timestamptz [not null, default: `now()`]
+  created_at timestamptz [not null, default: `now()`]
+
+  Note: 'Pre-calculated financial data for AI advisor. Updated by transaction trigger.'
+}
+
+Table financial_metrics_monthly {
+  id uuid [pk, default: `gen_random_uuid()`]
+  user_id uuid [not null, ref: > auth.users.id]
+  year integer [not null]
+  month integer [not null, note: '1-12']
+
+  // Income & Expense
+  total_income decimal(15,2) [not null, default: 0]
+  total_expense decimal(15,2) [not null, default: 0]
+  net_savings decimal(15,2) [not null, default: 0]
+  savings_rate decimal(5,2) [not null, default: 0]
+
+  // Budget Performance
+  budget_adherence_rate decimal(5,2) [not null, default: 0]
+  budgets_on_track integer [not null, default: 0]
+  budgets_over_limit integer [not null, default: 0]
+  total_budgets integer [not null, default: 0]
+
+  // Goal Status
+  active_goals_count integer [not null, default: 0]
+  goals_on_track integer [not null, default: 0]
+  goals_behind integer [not null, default: 0]
+
+  // Balances
+  month_start_balance decimal(15,2) [not null, default: 0]
+  month_end_balance decimal(15,2) [not null, default: 0]
+
+  // Transaction Counts
+  income_transaction_count integer [not null, default: 0]
+  expense_transaction_count integer [not null, default: 0]
+
+  // Category Breakdown
+  income_by_category jsonb [not null, default: '{}']
+  expense_by_category jsonb [not null, default: '{}']
+
+  // Top Categories
+  top_expense_category text
+  top_expense_amount decimal(15,2) [default: 0]
+  top_income_category text
+  top_income_amount decimal(15,2) [default: 0]
+
+  // Trends (vs previous month)
+  income_change_percent decimal(5,2) [default: 0]
+  expense_change_percent decimal(5,2) [default: 0]
+  savings_change_percent decimal(5,2) [default: 0]
+
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    user_id [name: 'financial_metrics_monthly_user_id_idx']
+    (user_id, year, month) [name: 'financial_metrics_monthly_user_date_idx', note: 'DESC on year, month, UNIQUE']
+  }
+
+  Note: 'Aggregated monthly financial statistics for analysis'
+}
+
+Table financial_metrics_daily {
+  id uuid [pk, default: `gen_random_uuid()`]
+  user_id uuid [not null, ref: > auth.users.id]
+  metric_date date [not null]
+
+  total_income decimal(15,2) [not null, default: 0]
+  total_expense decimal(15,2) [not null, default: 0]
+  net_savings decimal(15,2) [not null, default: 0]
+  running_balance decimal(15,2) [not null, default: 0, note: 'Balance up to this date']
+
+  income_transaction_count integer [not null, default: 0]
+  expense_transaction_count integer [not null, default: 0]
+
+  income_by_category jsonb [not null, default: '{}']
+  expense_by_category jsonb [not null, default: '{}']
+
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    user_id [name: 'financial_metrics_daily_user_id_idx']
+    (metric_date) [name: 'financial_metrics_daily_date_idx', note: 'DESC']
+    (user_id, metric_date) [name: 'financial_metrics_daily_user_date_idx', note: 'DESC on metric_date, UNIQUE']
+  }
+
+  Note: 'Daily financial snapshots for trend analysis'
+}
+
+Table financial_insights {
+  id uuid [pk, default: `gen_random_uuid()`]
+  user_id uuid [not null, ref: > auth.users.id]
+
+  // Classification
+  insight_type insight_type [not null]
+  title text [not null]
+  message text [not null]
+  severity insight_severity [not null]
+
+  // Related Data
+  metric_period text
+  related_category text
+  amount decimal(15,2)
+  percentage decimal(5,2)
+
+  // Recommendations
+  recommendation_text text
+  action_required boolean [default: false]
+
+  // Status
+  is_active boolean [not null, default: true]
+  acknowledged boolean [not null, default: false]
+  acknowledged_at timestamptz
+
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    user_id [name: 'financial_insights_user_id_idx']
+    (user_id, is_active, created_at) [name: 'financial_insights_active_idx', note: 'DESC on created_at']
+    (user_id, insight_type) [name: 'financial_insights_type_idx']
+    (user_id, is_active, created_at) [name: 'financial_insights_user_active_idx', note: 'Partial index WHERE is_active=true']
+  }
+
+  Note: 'AI-generated financial alerts and recommendations'
+}
+
+// ========================================
+// EXTERNAL REFERENCES (Supabase Auth)
+// ========================================
+
+Table auth.users {
+  id uuid [pk, note: 'Supabase Auth user ID']
+  email text
+
+  Note: 'Supabase Authentication table (managed by Supabase)'
+}
+
+// ========================================
+// RELATIONSHIPS SUMMARY
+// ========================================
+
+// User → Data
+// - One user has one profile (1:1)
+// - One user has many categories (1:N)
+// - One user has many transactions (1:N)
+// - One user has many budgets (1:N)
+// - One user has many saving goals (1:N)
+// - One user has many goal allocations (1:N)
+// - One user has many pending transactions (1:N)
+// - One user has one chatbot context (1:1)
+// - One user has many monthly metrics (1:N)
+// - One user has many daily metrics (1:N)
+// - One user has many insights (1:N)
+
+// Categories → Transactions/Budgets
+// - One category has many transactions (1:N)
+// - One category has many budgets (1:N)
+// - Categories can be default (user_id=NULL) or user-specific
+
+// Goals → Allocations
+// - One goal has many allocations (1:N)
+
+// ========================================
+// VIEWS (Not shown in diagram, but exist in DB)
+// ========================================
+
+// goal_progress_view: Calculated goal progress with percentages
+// v_latest_financial_status: Latest monthly status + health score
+
+// ========================================
+// KEY RPC FUNCTIONS (Business Logic)
+// ========================================
+
+// Goal Allocation:
+// - get_available_balance(user_id) → net, allocated, available
+// - can_allocate_to_goal(user_id, goal_id, amount) → boolean
+// - allocate_to_goal(user_id, goal_id, amount, note) → json
+// - withdraw_from_goal(user_id, goal_id, amount, note) → json
+
+// Analytics:
+// - update_user_analytics(user_id) → void
+// - refresh_my_analytics() → text
+// - initialize_user_analytics(user_id) → void
+// - update_chatbot_context(user_id) → void
+// - calculate_monthly_metrics(user_id, year, month) → void
+
+// ========================================
+// TRIGGERS
+// ========================================
+
+// on_auth_user_created: Auto-create profile on signup
+// transaction_analytics_trigger: Update analytics on transaction change
+// trigger_check_goal_completion: Auto-complete goal when target reached
+// update_*_updated_at: Auto-update timestamps on all tables
+
+// ========================================
+// STORAGE BUCKETS
+// ========================================
+
+// icons (public): User-uploaded category/budget icons
+// avatars (public): User profile pictures (ready but not implemented)
+
+// ========================================
+// RLS POLICIES
+// ========================================
+
+// All tables have Row Level Security enabled
+// Users can only access their own data (filtered by user_id)
+// Default categories (user_id=NULL) visible to all users
+// Service role can insert pending transactions (webhook)
